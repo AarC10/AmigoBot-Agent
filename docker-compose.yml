@@ -1,0 +1,17 @@
+services:
+  amigo:
+    build: .
+    container_name: amigo_sim
+    network_mode: host
+    environment:
+      - DISPLAY=${DISPLAY}
+      - QT_X11_NO_MITSHM=1
+      - LIBGL_ALWAYS_SOFTWARE=1
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - ./:/root/catkin_ws/src:rw
+      - catkin_build:/root/catkin_ws/build
+      - catkin_devel:/root/catkin_ws/devel
+volumes:
+  catkin_build:
+  catkin_devel:
