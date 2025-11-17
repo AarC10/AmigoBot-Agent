@@ -7,11 +7,15 @@ services:
       - DISPLAY=${DISPLAY}
       - QT_X11_NO_MITSHM=1
       - LIBGL_ALWAYS_SOFTWARE=1
+      - HOST_UID=${HOST_UID:-1000}
+      - HOST_GID=${HOST_GID:-1000}
+      - HOST_USER=${HOST_USER:-developer}
+    working_dir: /workspace
     volumes:
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
-      - ./:/root/catkin_ws/src:rw
-      - catkin_build:/root/catkin_ws/build
-      - catkin_devel:/root/catkin_ws/devel
+      - ./:/workspace:rw
+      - catkin_build:/workspace/build
+      - catkin_devel:/workspace/devel
 volumes:
   catkin_build:
   catkin_devel:
