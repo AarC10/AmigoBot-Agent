@@ -10,7 +10,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ros-noetic-gazebo-ros-pkgs ros-noetic-gazebo-ros-control \
     ros-noetic-joint-state-publisher-gui ros-noetic-robot-state-publisher \
     ros-noetic-xacro doxygen graphviz \
-    sudo procps locales \
+    sudo procps locales gosu \
     && rm -rf /var/lib/apt/lists/*
 
 RUN rosdep init || true && rosdep update
@@ -18,6 +18,9 @@ RUN rosdep init || true && rosdep update
 # Workspace skeleton
 RUN mkdir -p ${CATKIN_WS}/src
 WORKDIR ${CATKIN_WS}
+
+RUN groupadd -g 1000 rosdev || true \
+    && useradd -m -u 1000 -g 1000 -s /bin/bash rosdev || true
 
 RUN git clone --depth=1 https://github.com/reedhedges/AriaCoda.git /tmp/AriaCoda && \
     make -C /tmp/AriaCoda -j"$(nproc)" && \

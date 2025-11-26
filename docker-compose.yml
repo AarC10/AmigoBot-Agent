@@ -1,21 +1,23 @@
+version: '3.8'
+
 services:
-  amigo:
+  ros:
     build: .
-    container_name: amigo_sim
-    network_mode: host
-    environment:
-      - DISPLAY=${DISPLAY}
-      - QT_X11_NO_MITSHM=1
-      - LIBGL_ALWAYS_SOFTWARE=1
-      - HOST_UID=${HOST_UID:-1000}
-      - HOST_GID=${HOST_GID:-1000}
-      - HOST_USER=${HOST_USER:-developer}
-    working_dir: /workspace
+    image: amigobot:noetic
+    # Mount the repo root into the container so your IDE edits are reflected immediately
     volumes:
-      - /tmp/.X11-unix:/tmp/.X11-unix:rw
       - ./:/workspace:rw
-      - catkin_build:/workspace/build
-      - catkin_devel:/workspace/devel
-volumes:
-  catkin_build:
-  catkin_devel:
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+    environment:
+      - HOST_UID=${UID}
+      - HOST_GID=${GID}
+      - DISPLAY=${DISPLAY}
+    network_mode: "host"
+    tty: true
+    stdin_open: true
+    working_dir: /workspace
+    # If you need access to hardware (GPU, serial devices) add devices or privileged: true
+    # devices:
+    #   - /dev/ttyUSB0:/dev/ttyUSB0
+    # privileged: true
+
