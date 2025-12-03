@@ -23,7 +23,7 @@ class ClipNode(object):
         torch_device = rospy.get_param("~device", "cpu")
         if torch_device == "cuda" and not torch.cuda.is_available():
             rospy.logwarn("CUDA not available, using CPU instead")
-            self.device = "cpu"
+            torch_device = "cpu"
         self.device = torch.device(torch_device)
 
         # load model
@@ -111,8 +111,14 @@ class ClipNode(object):
         best_index = torch.argmax(probabilities).item()
         best_probability = probabilities[best_index].item()
 
-        if best_probability < self.min_confidence:
-            rospy.loginfo(f"vlm_clip: target '{query}' not found with sufficient confidence ({best_probability:.3f})")
+        uniform_prob = 1.0 / float(self.n_bins)
+        margin = rospy.get_param("~prob_margin", 0.05)
+
+        if best_probability < (uniform_prob + margin):
+            rospy.loginfo(
+                "vlm_clip: target '%s' not found (best_prob=%.3f, uniform=%.3f)",
+                query, best_probability, uniform_prob
+            )
             return QueryTargetResponse(
                 found=False,
                 confidence=best_probability,
