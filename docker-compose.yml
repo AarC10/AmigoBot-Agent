@@ -18,7 +18,7 @@ services:
     stdin_open: true
     working_dir: /workspace
     # If you need access to hardware (GPU, serial devices) add devices or privileged: true
-    # devices:
-    #   - /dev/ttyUSB0:/dev/ttyUSB0
+    devices:
+      - /dev/video0:/dev/video0
     # privileged: true
 
