@@ -1,0 +1,11 @@
+<launch>
+  <node pkg="picam_forwarder"
+        type="picam_forwarder_node.py"
+        name="picam_forwarder"
+        output="screen">
+    <param name="stream_url"  value="0" />
+    <param name="image_topic" value="/camera/image_raw" />
+    <param name="frame_id"    value="camera_link" />
+    <param name="fps"         value="10.0" />
+  </node>
+</launch>
