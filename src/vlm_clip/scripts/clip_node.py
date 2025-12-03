@@ -89,7 +89,26 @@ class ClipNode(object):
                 bearing_deg=0.0
             )
 
+        # Encoding
+        with torch.no_grad():
+            text_tokens = clip.tokenize([query]).to(self.device)
+            text_features = self.model.encode_text(text_tokens)
+            text_features = text_features / text_features.norm(dim=-1, keepdim=True)
+
+        # Evaluation
+        scores, bin_centers = self._score_bins(image, text_features)
+
+        if scores is None or len(scores) == 0:
+            rospy.logerr("vlm_clip: scoring failed")
+            return QueryTargetResponse(
+                found=False,
+                confidence=0.0,
+                bearing_deg=0.0
+            )
+
         
+
+
 
 
     def _score_bins(self, image, text_features):
