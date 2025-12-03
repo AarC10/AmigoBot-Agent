@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   ros:
-    user: "${UID}:${GID}"
+#    user: "${UID}:${GID}"
     build: .
     image: amigobot:noetic
     # Mount the repo root into the container so your IDE edits are reflected immediately
@@ -20,5 +20,5 @@ services:
     # If you need access to hardware (GPU, serial devices) add devices or privileged: true
     devices:
       - /dev/video0:/dev/video0
-    # privileged: true
+    privileged: true
 
