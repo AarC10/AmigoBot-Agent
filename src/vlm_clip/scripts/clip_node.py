@@ -106,6 +106,29 @@ class ClipNode(object):
                 bearing_deg=0.0
             )
 
+        scores_tensor = torch.tensor(scores, device=self.device, dtype=torch.float32)
+        probabilities = torch.nn.functional.softmax(scores_tensor, dim=0)
+        best_index = torch.argmax(probabilities).item()
+        best_probability = probabilities[best_index].item()
+
+        if best_probability < self.min_confidence:
+            rospy.loginfo(f"vlm_clip: target '{query}' not found with sufficient confidence ({best_probability:.3f})")
+            return QueryTargetResponse(
+                found=False,
+                confidence=best_probability,
+                bearing_deg=0.0
+            )
+
+        center_norm = bin_centers[best_index]
+        bearing_deg = (center_norm - 0.5) * self.camera_fov_deg
+        rospy.loginfo(
+            f"vlm_clip: target '{query}' found with confidence {best_probability:.3f} at bearing {bearing_deg:.2f} deg")
+        return QueryTargetResponse(
+            found=True,
+            confidence=best_probability,
+            bearing_deg=bearing_deg
+        )
+
     def _score_bins(self, image, text_features):
         w, h = image.size
 
