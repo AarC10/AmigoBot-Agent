@@ -6,6 +6,7 @@ from cv_bridge import CvBridge
 import torch as nn
 import clip
 from vlm_clip.srv import QueryTarget, QueryTargetResponse
+from PIL import Image as PILImage
 
 class ClipNode(object):
     def __init__(self):
@@ -55,7 +56,16 @@ class ClipNode(object):
             f"vlm_clip: node initialized and listening on {self.image_topic} and writing to {self.service_name}")
 
     def image_callback(self, msg):
-        pass
+        try:
+            cv_image = self.bridge.imgmsg_to_cv2(msg, "bgr8")
+        except Exception as e:
+            rospy.logerr(f"Failed to convert image: {e}")
+            return
+
+        with self.lock:
+            self.latest_image = PILImage.fromarray(cv_image[:, :, ::-1])
+            self.latest_stamp = msg.header.stamp
+
 
     def handle_query(self, req):
         pass
