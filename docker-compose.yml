@@ -2,6 +2,7 @@ version: '3.8'
 
 services:
   ros:
+    user: "${UID}:${GID}"
     build: .
     image: amigobot:noetic
     # Mount the repo root into the container so your IDE edits are reflected immediately
