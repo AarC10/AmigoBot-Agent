@@ -10,6 +10,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ros-noetic-gazebo-ros-pkgs ros-noetic-gazebo-ros-control \
     ros-noetic-joint-state-publisher-gui ros-noetic-robot-state-publisher \
     ros-noetic-xacro doxygen graphviz \
+    ros-noetic-cv-bridge ros-noetic-image-transport python3-opencv \
     sudo procps locales gosu \
     && rm -rf /var/lib/apt/lists/*
 
