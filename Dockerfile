@@ -15,6 +15,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     sudo procps locales gosu \
     && rm -rf /var/lib/apt/lists/*
 
+RUN python3 -m pip install --no-cache-dir --upgrade pip && \
+    python3 -m pip install --no-cache-dir \
+        torch torchvision --index-url https://download.pytorch.org/whl/cpu && \
+    python3 -m pip install --no-cache-dir \
+        git+https://github.com/openai/CLIP.git
+
 RUN rosdep init || true && rosdep update
 
 # Workspace skeleton

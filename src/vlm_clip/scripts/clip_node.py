@@ -2,7 +2,8 @@ import threading
 
 import rospy
 from cv_bridge import CvBridge
-
+import torch as nn
+import clip
 
 class ClipNode(object):
     def __init__(self):
@@ -14,10 +15,18 @@ class ClipNode(object):
         self.min_confidence = float(rospy.get_param("~min_confidence", 0.5))
         self.max_image_age = float(rospy.get_param("~max_image_age", 1.0))  # secs
 
-        # devices
-
+        # cpu or gpu for cuda
+        torch_device = rospy.get_param("~device", "cpu")
+        if torch_device == "cuda" and not nn.cuda.is_available():
+            rospy.logwarn("CUDA not available, using CPU instead")
+            self.device = "cpu"
+        self.device = nn.device(torch_device)
 
         # load model
+        model_name = rospy.get_param("~model_name", "ViT-B/32")
+        rospy.loginfo(f"Loading CLIP model '{model_name}' on device '{self.device}'")
+        self.model, self.preprocess = clip.load(model_name, device=self.device)
+        self.model.eval()
 
         # image buffer
         self.bridge = CvBridge()
@@ -35,6 +44,7 @@ class ClipNode(object):
 
     def _score_bins(self, image, text_features):
         pass
+
 
 def main():
     rospy.init_node("vlm_clip_node")
