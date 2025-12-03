@@ -1,9 +1,12 @@
 import threading
 
 import rospy
+from sensor_msgs.msg import Image
 from cv_bridge import CvBridge
 import torch as nn
 import clip
+from vlm_clip.srv import QueryTarget, QueryTargetResponse
+
 
 class ClipNode(object):
     def __init__(self):
@@ -35,6 +38,22 @@ class ClipNode(object):
         self.lock = threading.Lock()
 
         # subscriber
+        self.image_sub = rospy.Subscriber(
+            self.image_topic,
+            Image,
+            self.image_callback,
+            queue_size=1
+        )
+
+        # service
+        self.service = rospy.Service(
+            self.service_name,
+            QueryTarget,
+            self.handle_query
+        )
+
+        rospy.loginfo(
+            f"vlm_clip: node initialized and listening on {self.image_topic} and writing to {self.service_name}")
 
     def image_callback(self, msg):
         pass
