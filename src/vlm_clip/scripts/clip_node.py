@@ -7,7 +7,6 @@ import torch as nn
 import clip
 from vlm_clip.srv import QueryTarget, QueryTargetResponse
 
-
 class ClipNode(object):
     def __init__(self):
         # params
