@@ -30,6 +30,7 @@ RUN git clone --depth=1 https://github.com/reedhedges/AriaCoda.git /tmp/AriaCoda
 ENV LD_LIBRARY_PATH=/usr/local/lib:${LD_LIBRARY_PATH}
 
 COPY docker_entrypoint.sh /ros_entry.sh
-RUN chmod +x /ros_entry.sh
+COPY ros_python.sh /ros_python.sh
+RUN chmod +x /ros_entry.sh /ros_python.sh
 ENTRYPOINT ["/ros_entry.sh"]
 CMD ["bash"]
