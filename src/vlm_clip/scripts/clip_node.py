@@ -68,7 +68,29 @@ class ClipNode(object):
 
 
     def handle_query(self, req):
-        pass
+        query = req.query.strip()
+        if not query:
+            rospy.logerr(f"vlm_clip: invalid query '{query}'")
+            return QueryTargetResponse(
+                found=False,
+                confidence=0.0,
+                bearing_deg=0.0
+            )
+
+        with self.lock:
+            image = self.latest_image
+            stamp = self.latest_stamp
+
+        if image is None or (rospy.Time.now() - stamp).to_sec() > self.max_image_age:
+            rospy.logerr("vlm_clip: no recent image available")
+            return QueryTargetResponse(
+                found=False,
+                confidence=0.0,
+                bearing_deg=0.0
+            )
+
+        
+
 
     def _score_bins(self, image, text_features):
         pass
