@@ -1,4 +1,8 @@
+import threading
+
 import rospy
+from cv_bridge import CvBridge
+
 
 class ClipNode(object):
     def __init__(self):
