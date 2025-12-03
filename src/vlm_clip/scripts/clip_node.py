@@ -3,10 +3,11 @@ import threading
 import rospy
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge
-import torch as nn
+import torch
 import clip
 from vlm_clip.srv import QueryTarget, QueryTargetResponse
 from PIL import Image as PILImage
+
 
 class ClipNode(object):
     def __init__(self):
@@ -20,10 +21,10 @@ class ClipNode(object):
 
         # cpu or gpu for cuda
         torch_device = rospy.get_param("~device", "cpu")
-        if torch_device == "cuda" and not nn.cuda.is_available():
+        if torch_device == "cuda" and not torch.cuda.is_available():
             rospy.logwarn("CUDA not available, using CPU instead")
             self.device = "cpu"
-        self.device = nn.device(torch_device)
+        self.device = torch.device(torch_device)
 
         # load model
         model_name = rospy.get_param("~model_name", "ViT-B/32")
@@ -66,7 +67,6 @@ class ClipNode(object):
             self.latest_image = PILImage.fromarray(cv_image[:, :, ::-1])
             self.latest_stamp = msg.header.stamp
 
-
     def handle_query(self, req):
         query = req.query.strip()
         if not query:
@@ -106,13 +106,37 @@ class ClipNode(object):
                 bearing_deg=0.0
             )
 
-        
-
-
-
-
     def _score_bins(self, image, text_features):
-        pass
+        w, h = image.size
+
+        if w <= 0 or h <= 0 or self.n_bins <= 0:
+            rospy.logerr("vlm_clip: invalid image dimensions")
+            return None, None
+
+        bin_width = w / self.n_bins
+        scores = []
+        bin_centers = []
+
+        with torch.no_grad():
+            for i in range(self.n_bins):
+                left = int(i * bin_width)
+                right = int((i + 1) * bin_width) if i < self.n_bins - 1 else w
+                left = max(0, min(left, w - 1))
+                right = max(left + 1, min(right, w))
+
+                crop = image.crop((left, 0, right, h))
+                input_image = self.preprocess(crop).unsqueeze(0).to(self.device)
+
+                image_features = self.model.encode_image(input_image)
+                image_features = image_features / image_features.norm(dim=-1, keepdim=True)
+
+                similarity = (image_features @ text_features.T).squeeze().item()
+                scores.append(similarity)
+
+                center_x = 0.5 * (left + right)
+                center_norm = center_x / float(w)  # in [0, 1]
+                bin_centers.append(center_norm)
+        return scores, bin_centers
 
 
 def main():
