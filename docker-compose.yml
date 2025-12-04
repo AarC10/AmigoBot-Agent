@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   ros:
 #    user: "${UID}:${GID}"
@@ -10,8 +8,6 @@ services:
       - ./:/workspace:rw
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
     environment:
-      - HOST_UID=${UID}
-      - HOST_GID=${GID}
       - DISPLAY=${DISPLAY}
     network_mode: "host"
     tty: true
