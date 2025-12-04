@@ -36,6 +36,13 @@ RUN git clone --depth=1 https://github.com/reedhedges/AriaCoda.git /tmp/AriaCoda
     ldconfig
 ENV LD_LIBRARY_PATH=/usr/local/lib:${LD_LIBRARY_PATH}
 
+RUN echo 'ROS_SETUP="/opt/ros/${ROS_DISTRO:-noetic}/setup.bash"' >> /etc/bash.bashrc && \
+    echo '[ -f "$ROS_SETUP" ] && source "$ROS_SETUP"' >> /etc/bash.bashrc && \
+    echo 'WS="${CATKIN_WS:-/workspace}"' >> /etc/bash.bashrc && \
+    echo '[ -f "$WS/install/setup.bash" ] && source "$WS/install/setup.bash" || {' >> /etc/bash.bashrc && \
+    echo '  [ -f "$WS/devel/setup.bash" ] && source "$WS/devel/setup.bash";' >> /etc/bash.bashrc && \
+    echo '}' >> /etc/bash.bashrc
+
 COPY docker_entrypoint.sh /ros_entry.sh
 COPY ros_python.sh /ros_python.sh
 RUN chmod +x /ros_entry.sh /ros_python.sh
