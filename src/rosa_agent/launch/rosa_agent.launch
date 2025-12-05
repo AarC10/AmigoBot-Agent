@@ -1,0 +1,20 @@
+<launch>
+  <arg name="ollama_model"    default="llama3.1:8b" />
+  <arg name="ollama_base_url" default="http://localhost:11434" />
+
+  <node pkg="amigo_rosa"
+        type="rosa_agent_node.py"
+        name="amigo_rosa"
+        output="screen">
+
+    <param name="ros_version" value="1" />
+
+    <param name="ollama_model"    value="$(arg ollama_model)" />
+    <param name="ollama_base_url" value="$(arg ollama_base_url)" />
+    <param name="temperature"     value="0.0" />
+
+    <param name="go_to_target_action" value="/semantic_nav/go_to_target" />
+    <param name="stop_service"        value="/semantic_nav/stop" />
+    <param name="vlm_service"         value="/query_target" />
+  </node>
+</launch>

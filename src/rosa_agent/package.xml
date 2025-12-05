@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>amigo_rosa</name>
+  <version>0.0.1</version>
+  <description>ROSA agent node for AmigoBot</description>
+
+  <maintainer email="amc9897@rit.edu">Aaron Chan</maintainer>
+  <license>BSD</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <build_depend>rospy</build_depend>
+  <build_depend>std_msgs</build_depend>
+  <build_depend>actionlib</build_depend>
+  <build_depend>semantic_nav</build_depend>
+  <build_depend>vlm_clip</build_depend>
+
+  <exec_depend>rospy</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
+  <exec_depend>actionlib</exec_depend>
+  <exec_depend>semantic_nav</exec_depend>
+  <exec_depend>vlm_clip</exec_depend>
+</package>

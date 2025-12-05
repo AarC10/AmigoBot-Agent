@@ -19,7 +19,9 @@ RUN python3 -m pip install --no-cache-dir --upgrade pip && \
     python3 -m pip install --no-cache-dir \
         torch torchvision --index-url https://download.pytorch.org/whl/cu118 && \
     python3 -m pip install --no-cache-dir \
-        git+https://github.com/openai/CLIP.git
+        git+https://github.com/openai/CLIP.git && \
+    python3 -m pip install --no-cache-dir \
+        jpl-rosa langchain_ollama
 
 RUN rosdep init || true && rosdep update
 

@@ -1,0 +1,7 @@
+# Request
+string query
+---
+# Response
+bool   found
+float32 bearing_deg
+float32 confidence
