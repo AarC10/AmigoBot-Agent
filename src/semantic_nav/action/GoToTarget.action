@@ -1,0 +1,10 @@
+string target_label
+
+---
+bool   success
+string message
+
+---
+string state                 # "IDLE", "ALIGN", "APPROACH", "STOPPED"
+float32 bearing_deg          # latest bearing to target (NaN if unknown)
+float32 front_distance       # latest front obstacle distance (NaN if unknown)

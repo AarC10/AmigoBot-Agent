@@ -5,10 +5,29 @@ find_package(catkin REQUIRED COMPONENTS
   rospy
   geometry_msgs
   sensor_msgs
-  vlm_clip
+  actionlib
+  actionlib_msgs
+  message_generation
 )
 
-catkin_package()
+add_action_files(
+  DIRECTORY action
+  FILES
+    GoToTarget.action
+)
+
+generate_messages(
+  DEPENDENCIES
+    actionlib_msgs
+)
+
+catkin_package(
+  CATKIN_DEPENDS
+    geometry_msgs
+    sensor_msgs
+    actionlib_msgs
+    message_runtime
+)
 
 catkin_install_python(
   PROGRAMS

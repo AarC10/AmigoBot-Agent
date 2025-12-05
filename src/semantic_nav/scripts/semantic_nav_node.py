@@ -2,10 +2,12 @@
 import math
 import threading
 
+import actionlib
 import rospy
 from geometry_msgs.msg import Twist
 from sensor_msgs.msg import PointCloud
 from vlm_clip.srv import QueryTarget, QueryTargetRequest, QueryTargetResponse
+from semantic_nav.msg import GoToTargetAction, GoToTargetFeedback, GoToTargetResult
 from std_srvs.srv import Trigger, TriggerResponse
 
 class SemanticNavigator(object):
@@ -63,6 +65,15 @@ class SemanticNavigator(object):
         # start/stop services
         self.start_srv = rospy.Service("~start", Trigger, self.handle_start)
         self.stop_srv = rospy.Service("~stop", Trigger, self.handle_stop)
+
+        # target action server
+        self.action_server = actionlib.SimpleActionServer(
+            "~go_to_target",
+            GoToTargetAction,
+            execute_cb=self.execute_goal,
+            auto_start=False
+        )
+        self.action_server.start()
 
         # control loop timer
         self.timer = rospy.Timer(rospy.Duration(1.0 / self.control_rate_hz), self.control_loop)
