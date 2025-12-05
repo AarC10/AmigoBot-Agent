@@ -1,0 +1,40 @@
+<launch>
+  <!-- Args -->
+  <arg name="use_pi_camera"      default="true" />
+  <arg name="pi_host"            default="raspberrypi.local" />
+  <arg name="camera_fov_deg"     default="60.0" />
+  <arg name="vlm_device"         default="cpu" />
+  <arg name="vlm_min_confidence" default="0.4" />
+
+  <!-- Robot Bringup -->
+  <include file="$(find MABL)/amigo_real/amigo_real.launch">
+  </include>
+
+  <!-- 2) Camera -->
+  <group if="$(arg use_pi_camera)">
+    <include file="$(find picam_forwarder)/launch/remote_cam.launch">
+      <arg name="pi_host"    value="$(arg pi_host)" />
+      <arg name="image_topic" value="/camera/image_raw" />
+      <arg name="frame_id"    value="camera_link" />
+    </include>
+  </group>
+
+  <group unless="$(arg use_pi_camera)">
+    <include file="$(find picam_forwarder)/launch/picam_forwarder_local.launch">
+      <arg name="image_topic" value="/camera/image_raw" />
+      <arg name="frame_id"    value="camera_link" />
+    </include>
+  </group>
+
+  <!-- 3) VLM -->
+  <include file="$(find vlm_clip)/launch/vlm_clip_basic.launch">
+    <arg name="image_topic"    value="/camera/image_raw" />
+    <arg name="camera_fov_deg" value="$(arg camera_fov_deg)" />
+    <arg name="n_bins"         value="7" />
+    <arg name="min_confidence" value="$(arg vlm_min_confidence)" />
+    <arg name="device"         value="$(arg vlm_device)" />
+  </include>
+
+  <!-- 4) Smenatic Nav -->
+  <include file="$(find semantic_nav)/launch/semantic_nav.launch" />
+</launch>

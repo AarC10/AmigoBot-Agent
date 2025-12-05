@@ -1,0 +1,17 @@
+<launch>
+  <arg name="pi_host"    default="raspberrypi.local" />
+  <arg name="fps"        default="10.0" />
+  <arg name="image_topic" default="/camera/image_raw" />
+  <arg name="frame_id"    default="camera_link" />
+
+  <node pkg="picam_forwarder"
+        type="picam_forwarder_node.py"
+        name="picam_forwarder"
+        output="screen">
+    <param name="stream_url"
+           value="http://$(arg pi_host):8080/?action=stream" />
+    <param name="fps"         value="$(arg fps)" />
+    <param name="image_topic" value="$(arg image_topic)" />
+    <param name="frame_id"    value="$(arg frame_id)" />
+  </node>
+</launch>

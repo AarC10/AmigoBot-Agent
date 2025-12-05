@@ -1,0 +1,27 @@
+<launch>
+  <arg name="camera_fov_deg"     default="60.0" />
+  <arg name="vlm_device"         default="cpu" />
+  <arg name="vlm_min_confidence" default="0.4" />
+
+  <!-- 1) Sim Robot Bringup -->
+  <include file="$(find MABL)/amigo_sim/amigo_sim.launch">
+  </include>
+
+  <!-- 2) Camera -->
+  <include file="$(find picam_forwarder)/launch/picam_forwarder_local.launch">
+    <arg name="image_topic" value="/camera/image_raw" />
+    <arg name="frame_id"    value="camera_link" />
+  </include>
+
+  <!-- 3) VLM -->
+  <include file="$(find vlm_clip)/launch/vlm_clip_basic.launch">
+    <arg name="image_topic"    value="/camera/image_raw" />
+    <arg name="camera_fov_deg" value="$(arg camera_fov_deg)" />
+    <arg name="n_bins"         value="7" />
+    <arg name="min_confidence" value="$(arg vlm_min_confidence)" />
+    <arg name="device"         value="$(arg vlm_device)" />
+  </include>
+
+  <!-- 4) Semantic Nav -->
+  <include file="$(find semantic_nav)/launch/semantic_nav.launch" />
+</launch>
