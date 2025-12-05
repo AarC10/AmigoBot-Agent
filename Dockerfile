@@ -15,13 +15,25 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     sudo procps locales gosu \
     && rm -rf /var/lib/apt/lists/*
 
+# Python 3.9 for ROSA
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    software-properties-common \
+    && add-apt-repository -y ppa:deadsnakes/ppa \
+    && apt-get update && apt-get install -y --no-install-recommends \
+       python3.9 python3.9-venv python3.9-distutils python3.9-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Python 3.9 venv for ROSA
+RUN python3.9 -m venv /opt/rosa-venv && \
+    /opt/rosa-venv/bin/python -m pip install --upgrade pip && \
+    /opt/rosa-venv/bin/pip install --no-cache-dir \
+        jpl-rosa langchain_ollama rich pyinputplus python-dotenv
+
 RUN python3 -m pip install --no-cache-dir --upgrade pip && \
     python3 -m pip install --no-cache-dir \
         torch torchvision --index-url https://download.pytorch.org/whl/cu118 && \
     python3 -m pip install --no-cache-dir \
-        git+https://github.com/openai/CLIP.git && \
-    python3 -m pip install --no-cache-dir \
-        jpl-rosa langchain_ollama
+        git+https://github.com/openai/CLIP.git
 
 RUN rosdep init || true && rosdep update
 
