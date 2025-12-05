@@ -70,7 +70,7 @@ class ClipNode(object):
     def handle_query(self, req):
         query = req.query.strip()
         if not query:
-            rospy.logerr(f"vlm_clip: invalid query '{query}'")
+            rospy.logerr("vlm_clip: invalid empty query")
             return QueryTargetResponse(
                 found=False,
                 confidence=0.0,
@@ -81,21 +81,29 @@ class ClipNode(object):
             image = self.latest_image
             stamp = self.latest_stamp
 
-        if image is None or (rospy.Time.now() - stamp).to_sec() > self.max_image_age:
-            rospy.logerr("vlm_clip: no recent image available")
+        if image is None:
+            rospy.logerr("vlm_clip: no image available yet")
             return QueryTargetResponse(
                 found=False,
                 confidence=0.0,
                 bearing_deg=0.0
             )
 
-        # Encoding
+        if (rospy.Time.now() - stamp).to_sec() > self.max_image_age:
+            rospy.logerr("vlm_clip: latest image is too old")
+            return QueryTargetResponse(
+                found=False,
+                confidence=0.0,
+                bearing_deg=0.0
+            )
+
         with torch.no_grad():
-            text_tokens = clip.tokenize([query]).to(self.device)
+            query_prompt = f"a photo of {query}"
+            texts = [query_prompt, "background"]
+            text_tokens = clip.tokenize(texts).to(self.device)
             text_features = self.model.encode_text(text_tokens)
             text_features = text_features / text_features.norm(dim=-1, keepdim=True)
 
-        # Evaluation
         scores, bin_centers = self._score_bins(image, text_features)
 
         if scores is None or len(scores) == 0:
@@ -106,18 +114,14 @@ class ClipNode(object):
                 bearing_deg=0.0
             )
 
-        scores_tensor = torch.tensor(scores, device=self.device, dtype=torch.float32)
-        probabilities = torch.nn.functional.softmax(scores_tensor, dim=0)
-        best_index = torch.argmax(probabilities).item()
-        best_probability = probabilities[best_index].item()
+        scores_tensor = torch.tensor(scores, device=self.device)
+        best_index = int(torch.argmax(scores_tensor).item())
+        best_probability = float(scores[best_index])
 
-        uniform_prob = 1.0 / float(self.n_bins)
-        margin = rospy.get_param("~prob_margin", 0.05)
-
-        if best_probability < (uniform_prob + margin):
+        if best_probability < self.min_confidence:
             rospy.loginfo(
-                "vlm_clip: target '%s' not found (best_prob=%.3f, uniform=%.3f)",
-                query, best_probability, uniform_prob
+                "vlm_clip: target '%s' not found (max P=%.3f)",
+                query, best_probability
             )
             return QueryTargetResponse(
                 found=False,
@@ -125,10 +129,13 @@ class ClipNode(object):
                 bearing_deg=0.0
             )
 
-        center_norm = bin_centers[best_index]
+        center_norm = bin_centers[best_index]  # 0..1
         bearing_deg = (center_norm - 0.5) * self.camera_fov_deg
         rospy.loginfo(
-            f"vlm_clip: target '{query}' found with confidence {best_probability:.3f} at bearing {bearing_deg:.2f} deg")
+            "vlm_clip: target '%s' found at bearing %.2f deg with P=%.3f (bin=%d)",
+            query, bearing_deg, best_probability, best_index
+        )
+
         return QueryTargetResponse(
             found=True,
             confidence=best_probability,
@@ -139,12 +146,13 @@ class ClipNode(object):
         w, h = image.size
 
         if w <= 0 or h <= 0 or self.n_bins <= 0:
-            rospy.logerr("vlm_clip: invalid image dimensions")
+            rospy.logerr("vlm_clip: invalid image dimensions (w=%d, h=%d, n_bins=%d)",
+                         w, h, self.n_bins)
             return None, None
 
-        bin_width = w / self.n_bins
+        bin_width = float(w) / float(self.n_bins)
         scores = []
-        bin_centers = []
+        centers = []
 
         with torch.no_grad():
             for i in range(self.n_bins):
@@ -156,17 +164,22 @@ class ClipNode(object):
                 crop = image.crop((left, 0, right, h))
                 input_image = self.preprocess(crop).unsqueeze(0).to(self.device)
 
-                image_features = self.model.encode_image(input_image)
+                image_features = self.model.encode_image(input_image)  # (1, D)
                 image_features = image_features / image_features.norm(dim=-1, keepdim=True)
 
-                similarity = (image_features @ text_features.T).squeeze().item()
-                scores.append(similarity)
+                logits = 100.0 * image_features @ text_features.T
+                probs = torch.nn.functional.softmax(logits, dim=-1)
+
+                p_query = float(probs[0, 0].item())
+                scores.append(p_query)
 
                 center_x = 0.5 * (left + right)
-                center_norm = center_x / float(w)  # in [0, 1]
-                bin_centers.append(center_norm)
-        return scores, bin_centers
+                center_norm = center_x / float(w)
+                centers.append(center_norm)
 
+        rospy.logdebug("vlm_clip: bin P(query) = %s", ["%.3f" % s for s in scores])
+
+        return scores, centers
 
 def main():
     rospy.init_node("vlm_clip_node")
