@@ -14,7 +14,7 @@
   </include>
 
   <!-- 3) VLM -->
-  <include file="$(find vlm_clip)/launch/vlm_clip_basic.launch">
+  <include file="$(find vlm_clip)/launch/clip.launch">
     <arg name="image_topic"    value="/camera/image_raw" />
     <arg name="camera_fov_deg" value="$(arg camera_fov_deg)" />
     <arg name="n_bins"         value="7" />

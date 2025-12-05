@@ -1,6 +1,11 @@
 <launch>
   <arg name="image_topic" default="/camera/image_raw" />
   <arg name="camera_fov_deg" default="60.0" />
+  <arg name="n_bins" default="7" />
+  <arg name="min_confidence" default="0.5" />
+  <arg name="device" default="cpu" />
+  <arg name="model_name" default="ViT-B/32" />
+
 
   <node pkg="vlm_clip"
         type="clip_node.py"
@@ -8,9 +13,9 @@
         output="screen">
     <param name="image_topic" value="$(arg image_topic)" />
     <param name="camera_fov_deg" value="$(arg camera_fov_deg)" />
-    <param name="n_bins" value="7" />
-    <param name="min_confidence" value="0.5" />
-    <param name="device" value="cpu" />
-    <param name="model_name" value="ViT-B/32" />
+    <param name="n_bins" value="$(arg n_bins)" />
+    <param name="min_confidence" value="$(arg min_confidence)" />
+    <param name="device" value="$(arg device)" />
+    <param name="model_name" value="$(arg model_name)" />
   </node>
 </launch>
