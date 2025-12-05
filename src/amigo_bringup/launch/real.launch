@@ -7,7 +7,7 @@
   <arg name="vlm_min_confidence" default="0.4" />
 
   <!-- Robot Bringup -->
-  <include file="$(find MABL)/amigo_real/amigo_real.launch">
+  <include file="$(find amigo_real)/amigo_real.launch">
   </include>
 
   <!-- 2) Camera -->

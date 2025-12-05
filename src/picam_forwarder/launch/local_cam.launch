@@ -1,11 +1,16 @@
 <launch>
+  <arg name="stream_url"  default="0" />
+  <arg name="image_topic" default="/camera/image_raw" />
+  <arg name="frame_id"    default="camera_link" />
+  <arg name="fps"         default="10.0" />
+
   <node pkg="picam_forwarder"
         type="picam_forwarder_node.py"
         name="picam_forwarder"
         output="screen">
-    <param name="stream_url"  value="0" />
-    <param name="image_topic" value="/camera/image_raw" />
-    <param name="frame_id"    value="camera_link" />
-    <param name="fps"         value="10.0" />
+    <param name="stream_url"  value="$(arg stream_url)" />
+    <param name="image_topic" value="$(arg image_topic)" />
+    <param name="frame_id"    value="$(arg frame_id)" />
+    <param name="fps"         value="$(arg fps)" />
   </node>
 </launch>

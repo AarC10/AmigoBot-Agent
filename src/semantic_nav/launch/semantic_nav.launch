@@ -1,3 +1,47 @@
 <launch>
-<!--  TODO -->
+  <!-- HLB params -->
+  <arg name="target_label"       default="TODO" />
+  <arg name="vlm_service_name"   default="/query_target" />
+
+  <!-- I/O topics -->
+  <arg name="sonar_topic"        default="/RosAria/sonar" />
+  <arg name="cmd_vel_topic"      default="/cmd_vel" />
+
+  <!-- Control and Nav tuning params -->
+  <arg name="control_rate_hz"    default="10.0" />
+  <arg name="align_eps_deg"      default="5.0" />
+  <arg name="turn_gain"          default="0.01" />
+  <arg name="max_turn_rate"      default="0.6" />
+  <arg name="forward_speed"      default="0.1" />
+  <arg name="stop_distance"      default="0.5" />
+  <arg name="front_sector_deg"   default="30.0" />
+
+  <!-- Action timeout -->
+  <arg name="max_goal_duration"  default="120.0" />
+
+  <node pkg="semantic_nav"
+        type="semantic_nav_node.py"
+        name="semantic_nav"
+        output="screen">
+
+    <!-- HLB -->
+    <param name="target_label"       value="$(arg target_label)" />
+    <param name="vlm_service_name"   value="$(arg vlm_service_name)" />
+
+    <!-- Topics -->
+    <param name="sonar_topic"        value="$(arg sonar_topic)" />
+    <param name="cmd_vel_topic"      value="$(arg cmd_vel_topic)" />
+
+    <!-- Control and Tuning -->
+    <param name="control_rate_hz"    value="$(arg control_rate_hz)" />
+    <param name="align_eps_deg"      value="$(arg align_eps_deg)" />
+    <param name="turn_gain"          value="$(arg turn_gain)" />
+    <param name="max_turn_rate"      value="$(arg max_turn_rate)" />
+    <param name="forward_speed"      value="$(arg forward_speed)" />
+    <param name="stop_distance"      value="$(arg stop_distance)" />
+    <param name="front_sector_deg"   value="$(arg front_sector_deg)" />
+
+    <!-- Action timeout -->
+    <param name="max_goal_duration"  value="$(arg max_goal_duration)" />
+  </node>
 </launch>

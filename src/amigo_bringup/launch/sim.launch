@@ -4,11 +4,11 @@
   <arg name="vlm_min_confidence" default="0.4" />
 
   <!-- 1) Sim Robot Bringup -->
-  <include file="$(find MABL)/amigo_sim/amigo_sim.launch">
+  <include file="$(find amigo_sim)/amigo_sim.launch">
   </include>
 
   <!-- 2) Camera -->
-  <include file="$(find picam_forwarder)/launch/picam_forwarder_local.launch">
+  <include file="$(find picam_forwarder)/launch/local_cam.launch">
     <arg name="image_topic" value="/camera/image_raw" />
     <arg name="frame_id"    value="camera_link" />
   </include>

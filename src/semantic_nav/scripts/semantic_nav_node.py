@@ -43,6 +43,8 @@ class SemanticNavigator(object):
         self._current_goal_active = False
         self._goal_start_time = None
 
+        self.max_goal_duration = float(rospy.get_param("~max_goal_duration", 20.0)) # secs
+
         # sonar buffer
         self._sonar_lock = threading.Lock()
         self._sonar_points = None
@@ -95,6 +97,77 @@ class SemanticNavigator(object):
         self._publish_stop()
         rospy.loginfo("semantic_nav: stop requested (service), navigation halted")
         return TriggerResponse(success=True, message="Semantic navigation stopped.")
+
+    # Goal Eecutor
+    def execute_goal(self, goal):
+        if goal.target_label:
+            self.target_label = goal.target_label
+        rospy.loginfo("semantic_nav: new action goal: go_to_target('%s')",
+                      self.target_label)
+
+        # Activate navigation
+        self.active = True
+        self._current_goal_active = True
+        self.state = self.STATE_IDLE
+        self._goal_start_time = rospy.Time.now()
+
+        feedback = GoToTargetFeedback()
+        rate = rospy.Rate(self.control_rate_hz)
+
+        while not rospy.is_shutdown() and self._current_goal_active:
+            # Preempt check
+            if self.action_server.is_preempt_requested():
+                rospy.loginfo("semantic_nav: action goal preempted")
+                self.active = False
+                self._current_goal_active = False
+                self._publish_stop()
+
+                result = GoToTargetResult(success=False, message="Preempted")
+                self.action_server.set_preempted(result=result)
+                return
+
+            # Timeout check
+            if (rospy.Time.now() - self._goal_start_time).to_sec() > self.max_goal_duration:
+                rospy.loginfo("semantic_nav: action goal timed out after %.1f s",
+                              self.max_goal_duration)
+                self.active = False
+                self._current_goal_active = False
+                self._publish_stop()
+
+                result = GoToTargetResult(success=False, message="Timeout")
+                self.action_server.set_aborted(result=result)
+                return
+
+            # Success condition: STOPPED state
+            if self.state == self.STATE_STOPPED:
+                dist = self.last_front_distance
+                if math.isnan(dist):
+                    msg = "Stopped (no front distance)"
+                else:
+                    msg = "Reached stopping distance (%.2f m)" % dist
+
+                rospy.loginfo("semantic_nav: action goal succeeded: %s", msg)
+                self.active = False
+                self._current_goal_active = False
+                self._publish_stop()
+
+                result = GoToTargetResult(success=True, message=msg)
+                self.action_server.set_succeeded(result=result)
+                return
+
+            # Pub feedback
+            feedback.state = self.state
+            feedback.bearing_deg = float(self.last_bearing_deg)
+            feedback.front_distance = float(self.last_front_distance)
+            self.action_server.publish_feedback(feedback)
+
+            rate.sleep()
+
+        if self._current_goal_active:
+            rospy.loginfo("semantic_nav: action goal aborted due to shutdown")
+            self._current_goal_active = False
+            result = GoToTargetResult(success=False, message="Aborted")
+            self.action_server.set_aborted(result=result)
 
 
     # Callbacks
