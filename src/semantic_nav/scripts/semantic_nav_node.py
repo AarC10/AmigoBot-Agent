@@ -37,6 +37,10 @@ class SemanticNavigator(object):
         self.state = self.STATE_IDLE
         self.last_bearing_deg = 0.0
 
+        self.active = False
+        self._current_goal_active = False
+        self._goal_start_time = None
+
         # sonar buffer
         self._sonar_lock = threading.Lock()
         self._sonar_points = None
@@ -68,7 +72,30 @@ class SemanticNavigator(object):
 
     # Core loop
     def control_loop(self, event):
-        pass
+        # Shouldn't do stuff if inactive
+        if not self.active:
+            self._publish_stop()
+            return
+
+        # Alright now we can do stuff
+        try:
+            resp = self._call_vlm()
+        except Exception as e:
+            rospy.logwarn_throttle(2.0, "semantic_nav: VLM call failed: %s", str(e))
+            resp = None
+
+        if self.state == self.STATE_IDLE:
+            self._handle_idle(resp)
+        elif self.state == self.STATE_ALIGN:
+            self._handle_align(resp)
+        elif self.state == self.STATE_APPROACH:
+            self._handle_approach(resp)
+        elif self.state == self.STATE_STOPPED:
+            self._publish_stop()
+        else:
+            rospy.logwarn_throttle(5.0, "semantic_nav: unknown state '%s', resetting to IDLE", self.state)
+            self.state = self.STATE_IDLE
+            self._publish_stop()
 
     # State Handlers
     def _handle_idle(self, resp: QueryTargetResponse):
