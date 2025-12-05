@@ -72,13 +72,73 @@ class SemanticNavigator(object):
 
     # State Handlers
     def _handle_idle(self, resp: QueryTargetResponse):
-        pass
+        # Attempts to acquire the target
+        if resp is not None and resp.found:
+            self.last_bearing_deg = resp.bearing_deg
+            rospy.loginfo("semantic_nav: target '%s' acquired in IDLE (bearing=%.1f deg)",
+                          self.target_label, self.last_bearing_deg)
+            self.state = self.STATE_ALIGN
+        else:
+            # Remain stopped!!!
+            self._publish_stop()
 
     def _handle_align(self, resp: QueryTargetResponse):
-        pass
+        # Check if we lost the target
+        if resp is None or not resp.found:
+            rospy.loginfo_throttle(5.0, "semantic_nav: lost target during ALIGN, returning to IDLE")
+            self.state = self.STATE_IDLE
+            self._publish_stop()
+            return
+
+        # calc turn rate
+        bearing_deg = resp.bearing_deg
+        self.last_bearing_deg = bearing_deg
+
+        ang_z = self.turn_gain * bearing_deg  # rad/s
+        ang_z = max(-self.max_turn_rate, min(self.max_turn_rate, ang_z))
+
+        twist = Twist()
+        twist.angular.z = ang_z
+
+        # Check for alignment. If aligned, switch to APPROACH
+        if abs(bearing_deg) < self.align_eps_deg:
+            rospy.loginfo("semantic_nav: alignment achieved (bearing=%.1f deg), switching to APPROACH",
+                          bearing_deg)
+            twist.angular.z = 0.0
+            self.state = self.STATE_APPROACH
+
+        self.cmd_pub.publish(twist)
 
     def _handle_approach(self, resp: QueryTargetResponse):
-        pass
+        # Obstacle check
+        front_dist = self._get_front_obstacle_distance()
+        if front_dist is not None:
+            self.last_front_distance = front_dist
+        else:
+            self.last_front_distance = float("nan")
+
+        # Stop if too close
+        if front_dist is not None and front_dist < self.stop_distance:
+            rospy.loginfo("semantic_nav: obstacle within %.2f m (%.2f m), stopping",
+                          self.stop_distance, front_dist)
+            self.state = self.STATE_STOPPED
+            self._publish_stop()
+            return
+
+        # slight heading correction if we still see the target
+        bearing_deg = 0.0
+        if resp is not None and resp.found:
+            bearing_deg = resp.bearing_deg
+            self.last_bearing_deg = bearing_deg
+
+        ang_z = self.turn_gain * bearing_deg
+        ang_z = max(-self.max_turn_rate, min(self.max_turn_rate, ang_z))
+
+        twist = Twist()
+        twist.linear.x = self.forward_speed
+        twist.angular.z = ang_z
+
+        self.cmd_pub.publish(twist)
 
     # Helper funcs
     def _call_vlm(self):
