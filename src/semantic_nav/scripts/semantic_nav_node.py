@@ -18,7 +18,7 @@ class SemanticNavigator(object):
 
     def __init__(self):
         # Parameters
-        self.target_label = rospy.get_param("~target_label", "TODO")
+        self.target_label = rospy.get_param("~target_label", "")
         self.vlm_service_name = rospy.get_param("~vlm_service_name", "/query_target")
 
         # TODO: Need to remember the sonar topics used in Rosaria
