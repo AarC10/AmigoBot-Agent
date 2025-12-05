@@ -10,7 +10,7 @@
     <param name="camera_fov_deg" value="$(arg camera_fov_deg)" />
     <param name="n_bins" value="7" />
     <param name="min_confidence" value="0.5" />
-    <param name="device" value="gpu" />
+    <param name="device" value="cuda" />
     <param name="model_name" value="ViT-B/32" />
   </node>
 </launch>
