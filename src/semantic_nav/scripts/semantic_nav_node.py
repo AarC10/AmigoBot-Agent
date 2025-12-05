@@ -6,7 +6,7 @@ import rospy
 from geometry_msgs.msg import Twist
 from sensor_msgs.msg import PointCloud
 from vlm_clip.srv import QueryTarget, QueryTargetRequest, QueryTargetResponse
-
+from std_srvs.srv import Trigger, TriggerResponse
 
 class SemanticNavigator(object):
     STATE_IDLE = "IDLE"
@@ -59,11 +59,32 @@ class SemanticNavigator(object):
             rospy.logwarn("semantic_nav: VLM service '%s' not available at startup", self.vlm_service_name)
         self.vlm_query = rospy.ServiceProxy(self.vlm_service_name, QueryTarget)
 
+
+        # start/stop services
+        self.start_srv = rospy.Service("~start", Trigger, self.handle_start)
+        self.stop_srv = rospy.Service("~stop", Trigger, self.handle_stop)
+
         # control loop timer
         self.timer = rospy.Timer(rospy.Duration(1.0 / self.control_rate_hz), self.control_loop)
 
         rospy.loginfo("semantic_nav: initialized. Target='%s', sonar='%s', cmd_vel='%s'",
                       self.target_label, self.sonar_topic, self.cmd_vel_topic)
+
+    # start/stop
+    def handle_start(self, req):
+        self.active = True
+        self.state = self.STATE_IDLE
+        rospy.loginfo("semantic_nav: start requested (service), state set to IDLE")
+        return TriggerResponse(success=True, message="Semantic navigation started.")
+
+    def handle_stop(self, req):
+        self.active = False
+        self._current_goal_active = False
+        self.state = self.STATE_IDLE
+        self._publish_stop()
+        rospy.loginfo("semantic_nav: stop requested (service), navigation halted")
+        return TriggerResponse(success=True, message="Semantic navigation stopped.")
+
 
     # Callbacks
     def sonar_callback(self, msg: PointCloud):
