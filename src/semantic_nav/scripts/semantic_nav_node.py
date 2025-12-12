@@ -5,7 +5,8 @@ import threading
 import actionlib
 import rospy
 from geometry_msgs.msg import Twist
-from sensor_msgs.msg import PointCloud
+from sensor_msgs.msg import PointCloud, PointCloud2
+from sensor_msgs import point_cloud2 as pc2
 from vlm_clip.srv import QueryTarget, QueryTargetRequest, QueryTargetResponse
 from semantic_nav.msg import GoToTargetAction, GoToTargetFeedback, GoToTargetResult
 from std_srvs.srv import Trigger, TriggerResponse
@@ -21,8 +22,8 @@ class SemanticNavigator(object):
         self.target_label = rospy.get_param("~target_label", "")
         self.vlm_service_name = rospy.get_param("~vlm_service_name", "/query_target")
 
-        # TODO: Need to remember the sonar topics used in Rosaria
-        self.sonar_topic = rospy.get_param("~sonar_topic", "/RosAria/sonar")
+        # Use the sonar_pointcloud2 topic by default (matches topic_list.txt); allow override
+        self.sonar_topic = rospy.get_param("~sonar_topic", "/rosaria/sonar_pointcloud2")
         self.cmd_vel_topic = rospy.get_param("~cmd_vel_topic", "/cmd_vel")
 
         self.control_rate_hz = float(rospy.get_param("~control_rate_hz", 10.0))
@@ -38,6 +39,7 @@ class SemanticNavigator(object):
         # internal state
         self.state = self.STATE_IDLE
         self.last_bearing_deg = 0.0
+        self.last_front_distance = float("nan")
 
         self.active = False
         self._current_goal_active = False
@@ -47,13 +49,14 @@ class SemanticNavigator(object):
 
         # sonar buffer
         self._sonar_lock = threading.Lock()
-        self._sonar_points = None
+        self._sonar_points = None  # list of either Point objects or (x,y) tuples
 
-        # pubs and subs :)
+        # pubs and subs
         self.cmd_pub = rospy.Publisher(self.cmd_vel_topic, Twist, queue_size=1)
-        self.sonar_sub = rospy.Subscriber(
-            self.sonar_topic, PointCloud, self.sonar_callback, queue_size=1
-        )
+        # Subscribe to both common sonar topic names/types so the node works with either setup
+        self.sonar_sub_pc2 = rospy.Subscriber(self.sonar_topic, PointCloud2, self._sonar_pc2_callback, queue_size=1)
+        # also subscribe to legacy '/sonar' PointCloud if available
+        self.sonar_sub_pc = rospy.Subscriber(rospy.get_param("~legacy_sonar_topic", "/sonar"), PointCloud, self._sonar_callback, queue_size=1)
 
         # Should wait for VLM service to be available
         rospy.loginfo("semantic_nav: waiting for VLM service '%s'", self.vlm_service_name)
@@ -171,9 +174,20 @@ class SemanticNavigator(object):
 
 
     # Callbacks
-    def sonar_callback(self, msg: PointCloud):
+    def _sonar_callback(self, msg: PointCloud):
+        # store list of Point objects (have .x/.y)
         with self._sonar_lock:
-            self._sonar_points = msg.points
+            self._sonar_points = list(msg.points) if msg and msg.points is not None else None
+
+    def _sonar_pc2_callback(self, msg: PointCloud2):
+        # parse PointCloud2 into list of (x,y) tuples
+        try:
+            points_iter = pc2.read_points(msg, field_names=("x", "y", "z"), skip_nans=True)
+            pts = [(float(x), float(y)) for (x, y, z) in points_iter]
+        except Exception:
+            pts = None
+        with self._sonar_lock:
+            self._sonar_points = pts
 
     # Core loop
     def control_loop(self, event):
@@ -291,8 +305,15 @@ class SemanticNavigator(object):
         min_dist = None
 
         for point in points:
-            x = point.x
-            y = point.y
+            try:
+                x = point.x
+                y = point.y
+            except Exception:
+                try:
+                    x, y = point[0], point[1]
+                except Exception:
+                    continue
+
             dist = math.hypot(x, y)
             if dist <= 0.0:
                 continue
