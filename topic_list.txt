@@ -1,0 +1,97 @@
+/clicked_point
+/cmd_vel
+/initialpose
+/joint_states
+/move_base_simple/goal
+/pose
+/rosaria/battery_recharge_state
+/rosaria/battery_state_of_charge
+/rosaria/battery_voltage
+/rosaria/bumper_state
+/rosaria/motors_state
+/rosaria/parameter_descriptions
+/rosaria/parameter_updates
+/rosaria/sonar_pointcloud2
+/rosout
+/rosout_agg
+/sonar
+/tf
+/tf_static
+
+
+
+pointcloud2
+header:
+  seq: 14
+  stamp:
+    secs: 1765573235
+    nsecs: 708501723
+  frame_id: "sonar"
+height: 1
+width: 8
+fields:
+  -
+    name: "x"
+    offset: 0
+    datatype: 7
+    count: 1
+  -
+    name: "y"
+    offset: 4
+    datatype: 7
+    count: 1
+  -
+    name: "z"
+    offset: 8
+    datatype: 7
+    count: 1
+is_bigendian: False
+point_step: 12
+row_step: 96
+data: [41, 92, 143, 61, 174, 71, 225, 62, 0, 0, 0, 0, 193, 206, 24, 64, 234, 173, 2, 64, 0, 0, 0, 0, 248, 39, 159, 64, 244, 123, 169, 63, 0, 0, 0, 0, 248, 39, 159, 64, 244, 123, 169, 191, 0, 0, 0, 0, 189, 196, 111, 63, 80, 236, 72, 191, 0, 0, 0, 0, 41, 92, 143, 61, 123, 20, 14, 191, 0, 0, 0, 0, 200, 3, 122, 191, 65, 189, 35, 191, 0, 0, 0, 0, 128, 188, 135, 192, 167, 65, 59, 64, 0, 0, 0, 0]
+is_dense: False
+
+/sonar
+Sonar 0: 90 degrees left
+Sonar 1: 44 degrees left
+Sonar 2: 12 degrees
+Sonar 3: 12 degrees right (-12)
+Sonar 4: -44 degrees right (-44)
+Sonar 4: 90 degrees right (-90)
+Sonar 5: -144 degrees right (-144)
+Sonar 6: 144 degrees left
+
+points:
+  -
+    x: 0.07000000029802322
+    y: 0.4399999976158142
+    z: 0.0
+  -
+    x: 2.3876192569732666
+    y: 2.0418648719787598
+    z: 0.0
+  -
+    x: 4.973628997802734
+    y: 1.3240952491760254
+    z: 0.0
+  -
+    x: 4.973628997802734
+    y: -1.3240952491760254
+    z: 0.0
+  -
+    x: 0.9365957379341125
+    y: -0.784855842590332
+    z: 0.0
+  -
+    x: 0.07000000029802322
+    y: -0.5550000071525574
+    z: 0.0
+  -
+    x: -0.9766201972961426
+    y: -0.6396065354347229
+    z: 0.0
+  -
+    x: -4.24176025390625
+    y: 2.92588210105896
+    z: 0.0
+channels: []
