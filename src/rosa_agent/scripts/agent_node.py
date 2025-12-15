@@ -320,6 +320,62 @@ class SensorHelper:
         resp = self.vlm_query(req)
         return {'found': bool(resp.found), 'bearing_deg': float(resp.bearing_deg), 'confidence': float(resp.confidence)}
 
+    def get_index_for_angle(self, angle_deg: float):
+        """Return the sonar channel index whose configured angle is closest to angle_deg.
+        Returns None if mapping unavailable.
+        """
+        if not self.sonar_angle_mapping:
+            return None
+        best_idx = None
+        best_diff = None
+        for idx, ang in self.sonar_angle_mapping.items():
+            try:
+                diff = abs(float(ang) - float(angle_deg))
+            except Exception:
+                continue
+            if (best_diff is None) or (diff < best_diff):
+                best_diff = diff
+                best_idx = idx
+        return best_idx
+
+    def get_distance_for_index(self, index: int):
+        """Return measured distance (meters) for the given sonar index from the last PointCloud sample.
+        Returns float('nan') if unavailable.
+        """
+        with self._sonar_lock:
+            pts = list(self._sonar_points) if self._sonar_points is not None else None
+
+        if not pts:
+            # return default distance in sim mode
+            try:
+                use_sim = bool(rospy.get_param('/use_sim_time', False))
+            except Exception:
+                use_sim = False
+            if use_sim:
+                try:
+                    return float(rospy.get_param('~sim_default_distance', 1.0))
+                except Exception:
+                    return 1.0
+            return float('nan')
+
+        if index is None:
+            return float('nan')
+        try:
+            point = pts[index]
+        except Exception:
+            return float('nan')
+
+        try:
+            x = point.x
+            y = point.y
+        except Exception:
+            try:
+                x, y = point[0], point[1]
+            except Exception:
+                return float('nan')
+        dist = math.hypot(x, y)
+        return dist if dist > 0.0 else float('nan')
+
 
 sensors = SensorHelper()
 
@@ -388,6 +444,72 @@ def vlm_query(query: str) -> str:
         return f"error: {e}"
 
 
+@tool
+def sonar_distance(index: int) -> str:
+    """Return the distance for a particular sonar channel index (meters) as a string."""
+    try:
+        d = sensors.get_distance_for_index(int(index))
+        if math.isnan(d):
+            return 'nan'
+        return f"{d:.3f}"
+    except Exception as e:
+        return f"error: {e}"
+
+
+@tool
+def sonar_distance_angle(angle_deg: float) -> str:
+    """Find the sonar index closest to angle_deg and return its distance as a string."""
+    try:
+        idx = sensors.get_index_for_angle(float(angle_deg))
+        if idx is None:
+            return "error: no sonar mapping available"
+        return sonar_distance(idx)
+    except Exception as e:
+        return f"error: {e}"
+
+
+@tool
+def approach_target(query: str, safety_margin: float = 0.2) -> str:
+    """
+    High-level helper: query the VLM for a target, use the corresponding sonar to get distance,
+    turn to the bearing, and drive forward to the object minus safety_margin.
+
+    This requires the VLM service and sonar pointcloud to be available. Returns status messages.
+    """
+    try:
+        res = sensors.query_vlm(query)
+    except Exception as e:
+        return f"vlm error: {e}"
+
+    if not res.get('found', False):
+        return f"target '{query}' not found by VLM"
+
+    bearing = float(res.get('bearing_deg', 0.0))
+
+    # Map bearing to sonar index and get distance
+    idx = sensors.get_index_for_angle(bearing)
+    if idx is None:
+        return f"no sonar mapping available to resolve bearing {bearing:.1f} deg"
+
+    d = sensors.get_distance_for_index(idx)
+    if math.isnan(d):
+        return f"no distance reading available for sonar {idx}"
+
+    # Turn first
+    turn_result = motion.turn(bearing)
+    # If turn_result is an error string containing 'No odometry', still proceed to return it
+    if isinstance(turn_result, str) and turn_result.lower().startswith('no odometry'):
+        return f"turn failed: {turn_result}"
+
+    # Drive forward to (d - safety_margin), but ensure non-negative
+    go_dist = max(0.0, d - float(safety_margin))
+    if go_dist <= 0.0:
+        return f"already within safety margin ({d:.3f} m)"
+
+    drive_result = motion.drive(go_dist)
+    return f"turned: {turn_result}; drove: {drive_result}"
+
+
 class AmigobotAgent(ROSA if ROSA is not None else object):
     def __init__(self):
         # Read LLM config from ROS params with safe defaults
@@ -427,7 +549,7 @@ class AmigobotAgent(ROSA if ROSA is not None else object):
             rospy.logwarn(
                 "ROSA base class not available; creating a minimal agent object with tool invocation support.")
 
-        tools = [drive_forward, drive_backward, turn, vlm_query, front_distance]
+        tools = [drive_forward, drive_backward, turn, vlm_query, front_distance, sonar_distance, sonar_distance_angle, approach_target]
 
         # If ROSA is available, call its constructor or just set minimal attrs
         if ROSA is not None:
