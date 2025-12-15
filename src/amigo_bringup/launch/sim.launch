@@ -22,9 +22,8 @@
     <arg name="device"         value="$(arg vlm_device)" />
   </include>
 
-  <!-- 4) Semantic Nav -->
-  <include file="$(find semantic_nav)/launch/semantic_nav.launch" />
-
-  <!-- 5) ROSA Agent -->
-  <include file="$(find amigo_rosa)/launch/rosa_agent.launch" />
+  <!-- 4) ROSA Agent (replaces semantic nav) -->
+  <include file="$(find rosa_agent)/launch/rosa_agent.launch">
+    <arg name="topic_list_path" value="$(find amigo_bringup)/../..//topic_list.txt" />
+  </include>
 </launch>

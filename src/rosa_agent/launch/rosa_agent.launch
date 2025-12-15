@@ -17,5 +17,10 @@
     <param name="go_to_target_action" value="/semantic_nav/go_to_target" />
     <param name="stop_service"        value="/semantic_nav/stop" />
     <param name="vlm_service"         value="/query_target" />
+    <!-- Sonar and topic list path params -->
+    <param name="sonar_topic" value="/rosaria/sonar_pointcloud2" />
+    <param name="legacy_sonar_topic" value="/sonar" />
+    <param name="front_sector_deg" value="30.0" />
+    <param name="topic_list_path" value="$(arg topic_list_path)" />
   </node>
 </launch>

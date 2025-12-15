@@ -189,6 +189,18 @@ class SensorHelper:
         self.legacy_sonar_topic = rospy.get_param('~legacy_sonar_topic', '/sonar')
         self.front_sector_deg = float(rospy.get_param('~front_sector_deg', 30.0))
 
+        # Positive = left, Negative = right
+        self.sonar_angle_mapping = {
+            0: 90.0,
+            1: 44.0,
+            2: 12.0,
+            3: -12.0,
+            4: -44.0,
+            5: -90.0,
+            6: -144.0,
+            7: 144.0,
+        }
+
         if PointCloud2 is not None:
             try:
                 self._pc2_sub = rospy.Subscriber(self.sonar_topic, PointCloud2, self._sonar_pc2_callback, queue_size=1)
@@ -238,6 +250,34 @@ class SensorHelper:
         if not pts:
             return float('nan')
 
+        try:
+            if self.sonar_angle_mapping and len(pts) == len(self.sonar_angle_mapping):
+                min_dist = None
+                for idx, (x, y) in enumerate(pts):
+                    ang_deg = self.sonar_angle_mapping.get(idx, None)
+                    if ang_deg is None:
+                        continue
+                    if isinstance(ang_deg, (int, float)):
+                        ang_deg_f = float(ang_deg)
+                    elif isinstance(ang_deg, str):
+                        try:
+                            ang_deg_f = float(ang_deg)
+                        except Exception:
+                            continue
+                    else:
+                        continue
+                    if abs(ang_deg_f) <= self.front_sector_deg:
+                        dist = math.hypot(x, y)
+                        if dist <= 0.0:
+                            continue
+                        if (min_dist is None) or (dist < min_dist):
+                            min_dist = dist
+                return min_dist if min_dist is not None else float('nan')
+        except Exception:
+            # fallback to positional method below
+            pass
+
+        # Fallback: compute angle per point using atan2(y, x)
         front_rad = math.radians(self.front_sector_deg)
         min_dist = None
         for p in pts:

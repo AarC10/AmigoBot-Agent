@@ -35,6 +35,9 @@
     <arg name="device"         value="$(arg vlm_device)" />
   </include>
 
-  <!-- 4) Smenatic Nav -->
-  <include file="$(find semantic_nav)/launch/semantic_nav.launch" />
+  <!-- 4) ROSA Agent (replace semantic nav control) -->
+  <include file="$(find rosa_agent)/launch/rosa_agent.launch">
+    <!-- Provide path to topic_list if available on filesystem; adjust as needed -->
+    <arg name="topic_list_path" value="$(find amigo_bringup)/../..//topic_list.txt" />
+  </include>
 </launch>
