@@ -248,6 +248,15 @@ class SensorHelper:
             pts = list(self._sonar_points) if self._sonar_points is not None else None
 
         if not pts:
+            try:
+                use_sim = bool(rospy.get_param('/use_sim_time', False))
+            except Exception:
+                use_sim = False
+            if use_sim:
+                try:
+                    return float(rospy.get_param('~sim_default_distance', 1.0))
+                except Exception:
+                    return 1.0
             return float('nan')
 
         try:
