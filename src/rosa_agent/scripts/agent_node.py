@@ -1,5 +1,15 @@
-#!/opt/rosa-venv/bin/python
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 import sys
+# Ensure ROS/system site-packages are visible before any ROS imports
+sys.path.insert(0, "/opt/ros/noetic/lib/python3/dist-packages")
+sys.path.insert(0, "/usr/lib/python3/dist-packages")
+
+try:
+    import rospkg  # noqa: F401
+except Exception as e:
+    raise ImportError("rospkg not found. Ensure ROS Python site-packages are on sys.path and apt package python3-rospkg is installed.") from e
+
 import math
 import asyncio
 import rospy
@@ -9,8 +19,6 @@ from nav_msgs.msg import Odometry
 from langchain.agents import tool
 from langchain_ollama import ChatOllama
 from rosa import ROSA
-
-sys.path.append("/opt/ros/noetic/lib/python3/dist-packages")
 
 class MotionHelper:
     def __init__(self):

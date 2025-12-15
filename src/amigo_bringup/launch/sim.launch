@@ -24,4 +24,7 @@
 
   <!-- 4) Semantic Nav -->
   <include file="$(find semantic_nav)/launch/semantic_nav.launch" />
+
+  <!-- 5) ROSA Agent -->
+  <include file="$(find amigo_rosa)/launch/rosa_agent.launch" />
 </launch>

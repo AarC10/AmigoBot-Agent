@@ -13,6 +13,6 @@ catkin_package()
 
 catkin_install_python(
   PROGRAMS
-    scripts/rosa_agent_node.py
+    scripts/agent_node.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )

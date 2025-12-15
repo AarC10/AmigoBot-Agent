@@ -3,9 +3,10 @@
   <arg name="ollama_base_url" default="http://localhost:11434" />
 
   <node pkg="amigo_rosa"
-        type="rosa_agent_node.py"
+        type="agent_node.py"
         name="amigo_rosa"
-        output="screen">
+        output="screen"
+        launch-prefix="/opt/rosa-venv/bin/python -u">
 
     <param name="ros_version" value="1" />
 
