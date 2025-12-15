@@ -173,7 +173,6 @@ class SimpleMotionAgent(ROSA):
             ros_version=1,
             llm=llm,
             tools=[drive_forward, drive_backward, turn],
-            prompts={"system": "You control a robot base. Use tools to move it."},
             verbose=True,
             streaming=False,
         )
