@@ -22,7 +22,7 @@
     <arg name="device"         value="$(arg vlm_device)" />
   </include>
 
-  <!-- 4) ROSA Agent (replaces semantic nav) -->
-  <include file="$(find rosa_agent)/launch/rosa_agent.launch">
+  <!-- 4) ROSA Agent -->
+  <include file="$(find amigo_agent)/launch/rosa_agent.launch">
   </include>
 </launch>

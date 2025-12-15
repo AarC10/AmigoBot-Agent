@@ -21,6 +21,5 @@
     <param name="sonar_topic" value="/rosaria/sonar_pointcloud2" />
     <param name="legacy_sonar_topic" value="/sonar" />
     <param name="front_sector_deg" value="30.0" />
-    <param name="topic_list_path" value="$(arg topic_list_path)" />
   </node>
 </launch>

@@ -469,13 +469,30 @@ def sonar_distance_angle(angle_deg: float) -> str:
 
 
 @tool
-def approach_target(query: str, safety_margin: float = 0.2) -> str:
+def approach_target_safe(query: str, safety_margin: float = 0.2, confidence_threshold: float = 0.4, samples: int = 3, sample_delay: float = 0.1) -> str:
     """
-    High-level helper: query the VLM for a target, use the corresponding sonar to get distance,
-    turn to the bearing, and drive forward to the object minus safety_margin.
+    Robust helper to approach a VLM-detected object safely
 
-    This requires the VLM service and sonar pointcloud to be available. Returns status messages.
+    Steps:
+      1. Query VLM for the `query` string.
+      2. Verify `found` and `confidence` >= confidence_threshold.
+      3. Map bearing to the nearest sonar index.
+      4. Sample the sonar `samples` times (with `sample_delay`) and use the median reading.
+      5. Turn the robot to the reported bearing.
+      6. After turning, verify front clearance via `front_distance()`; abort if too close.
+      7. Drive forward to (measured_distance - safety_margin).
+
+    :param query: The object to look for with the camera
+    :param safety_margin: The minimum distance to maintain from the target (meters)
+    :param confidence_threshold: The minimum VLM confidence to accept the target
+    :param samples: The number of sonar samples to take for distance estimation
+    :param sample_delay: Delay (seconds) between sonar samples
+    :return: Returns a concise status string. Uses simulation fallback distance when /use_sim_time=true.
+
     """
+    import statistics
+
+    # Query VLM
     try:
         res = sensors.query_vlm(query)
     except Exception as e:
@@ -484,30 +501,64 @@ def approach_target(query: str, safety_margin: float = 0.2) -> str:
     if not res.get('found', False):
         return f"target '{query}' not found by VLM"
 
+    confidence = float(res.get('confidence', 0.0))
     bearing = float(res.get('bearing_deg', 0.0))
 
-    # Map bearing to sonar index and get distance
+    if confidence < float(confidence_threshold):
+        return f"vlm confidence too low ({confidence:.3f} < {confidence_threshold:.3f})"
+
+    # Map bearing -> sonar index
     idx = sensors.get_index_for_angle(bearing)
     if idx is None:
         return f"no sonar mapping available to resolve bearing {bearing:.1f} deg"
 
-    d = sensors.get_distance_for_index(idx)
-    if math.isnan(d):
-        return f"no distance reading available for sonar {idx}"
+    # Sample sonar readings
+    readings = []
+    for i in range(max(1, int(samples))):
+        d = sensors.get_distance_for_index(idx)
+        readings.append(d)
+        # short delay to allow new data in real setups
+        try:
+            rospy.sleep(float(sample_delay))
+        except Exception:
+            # fallback to time.sleep if rospy.sleep unavailable
+            import time
+            time.sleep(float(sample_delay))
 
-    # Turn first
+    # Filter NaNs
+    valid = [r for r in readings if not math.isnan(r)]
+    if not valid:
+        # sim fallback handled in get_distance_for_index
+        return f"no valid sonar readings for index {idx} (samples={readings})"
+
+    # Use conservative est. median to be robust, also compute min for safety
+    med = float(statistics.median(valid))
+    mn = float(min(valid))
+
+    # Turn to bearing
     turn_result = motion.turn(bearing)
-    # If turn_result is an error string containing 'No odometry', still proceed to return it
-    if isinstance(turn_result, str) and turn_result.lower().startswith('no odometry'):
+    if isinstance(turn_result, str) and 'no odometry' in turn_result.lower():
         return f"turn failed: {turn_result}"
 
-    # Drive forward to (d - safety_margin), but ensure non-negative
-    go_dist = max(0.0, d - float(safety_margin))
-    if go_dist <= 0.0:
-        return f"already within safety margin ({d:.3f} m)"
+    # After turning, verify front clearance
+    try:
+        front = sensors.get_front_obstacle_distance()
+    except Exception:
+        front = float('nan')
 
-    drive_result = motion.drive(go_dist)
-    return f"turned: {turn_result}; drove: {drive_result}"
+    if not math.isnan(front) and front < float(safety_margin):
+        return f"aborting after turn: front clearance too small ({front:.3f} m)"
+
+    # Compute target drive distance (use conservative min reading)
+    target_dist = max(0.0, mn - float(safety_margin))
+    if target_dist <= 0.0:
+        return f"already within safety margin (nearest reading {mn:.3f} m)"
+
+    drive_result = motion.drive(target_dist)
+
+    return (f"vlm:found={res['found']},bearing={bearing:.1f},conf={confidence:.3f}; "
+            f"sonar_idx={idx},samples={len(readings)},median={med:.3f},min={mn:.3f}; "
+            f"turn={turn_result}; drive={drive_result}")
 
 
 class AmigobotAgent(ROSA if ROSA is not None else object):
@@ -549,7 +600,7 @@ class AmigobotAgent(ROSA if ROSA is not None else object):
             rospy.logwarn(
                 "ROSA base class not available; creating a minimal agent object with tool invocation support.")
 
-        tools = [drive_forward, drive_backward, turn, vlm_query, front_distance, sonar_distance, sonar_distance_angle, approach_target]
+        tools = [drive_forward, drive_backward, turn, vlm_query, front_distance, sonar_distance, sonar_distance_angle, approach_target_safe]
 
         # If ROSA is available, call its constructor or just set minimal attrs
         if ROSA is not None:

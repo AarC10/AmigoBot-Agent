@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.0.2)
-project(amigo_rosa)
+project(amigo_agent)
 
 find_package(catkin REQUIRED COMPONENTS
   rospy

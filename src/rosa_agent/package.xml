@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>amigo_rosa</name>
+  <name>amigo_agent</name>
   <version>0.0.1</version>
   <description>ROSA agent node for AmigoBot</description>
 
