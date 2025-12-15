@@ -17,9 +17,53 @@ import threading
 import requests
 from geometry_msgs.msg import Twist
 from nav_msgs.msg import Odometry
-from langchain.agents import tool
-from langchain_ollama import ChatOllama
-from rosa import ROSA
+
+import importlib
+
+# Attempt to import langchain tool decorator
+try:
+    _lc_agents = importlib.import_module('langchain.agents')
+    tool = getattr(_lc_agents, 'tool', None)
+    if not callable(tool):
+        def tool(fn=None, *dargs, **dkwargs):
+            if fn is None:
+                return lambda f: f
+            return fn
+except Exception:
+    def tool(fn=None, *dargs, **dkwargs):
+        # allow using @tool without breaking
+        if fn is None:
+            return lambda f: f
+        return fn
+
+# Attempt to import ChatOllama and ROSA
+try:
+    _mod_llama = importlib.import_module('langchain_ollama')
+    ChatOllama = getattr(_mod_llama, 'ChatOllama', None)
+except Exception:
+    ChatOllama = None
+
+try:
+    _mod_rosa = importlib.import_module('rosa')
+    ROSA = getattr(_mod_rosa, 'ROSA', None)
+except Exception:
+    ROSA = None
+
+# VLM service and pointcloud types
+try:
+    from vlm_clip.srv import QueryTarget, QueryTargetRequest
+except Exception:
+    QueryTarget = None
+    QueryTargetRequest = None
+
+try:
+    from sensor_msgs.msg import PointCloud, PointCloud2
+    from sensor_msgs import point_cloud2 as pc2
+except Exception:
+    PointCloud = None
+    PointCloud2 = None
+    pc2 = None
+
 
 class MotionHelper:
     def __init__(self):
@@ -136,6 +180,96 @@ class MotionHelper:
 motion = MotionHelper()
 
 
+class SensorHelper:
+    def __init__(self):
+        self._sonar_lock = threading.Lock()
+        self._sonar_points = None
+
+        self.sonar_topic = rospy.get_param('~sonar_topic', '/rosaria/sonar_pointcloud2')
+        self.legacy_sonar_topic = rospy.get_param('~legacy_sonar_topic', '/sonar')
+        self.front_sector_deg = float(rospy.get_param('~front_sector_deg', 30.0))
+
+        if PointCloud2 is not None:
+            try:
+                self._pc2_sub = rospy.Subscriber(self.sonar_topic, PointCloud2, self._sonar_pc2_callback, queue_size=1)
+            except Exception:
+                self._pc2_sub = None
+        else:
+            self._pc2_sub = None
+
+        if PointCloud is not None:
+            try:
+                self._pc_sub = rospy.Subscriber(self.legacy_sonar_topic, PointCloud, self._sonar_callback, queue_size=1)
+            except Exception:
+                self._pc_sub = None
+        else:
+            self._pc_sub = None
+
+        # VLM service proxy
+        self.vlm_service_name = rospy.get_param('~vlm_service_name', '/query_target')
+        self.vlm_query = None
+        if QueryTarget is not None and QueryTargetRequest is not None:
+            try:
+                rospy.loginfo("agent_node: waiting for VLM service '%s'", self.vlm_service_name)
+                rospy.wait_for_service(self.vlm_service_name, timeout=5.0)
+                self.vlm_query = rospy.ServiceProxy(self.vlm_service_name, QueryTarget)
+            except Exception:
+                rospy.logwarn("agent_node: VLM service not available (will attempt calls when needed)")
+
+    def _sonar_callback(self, msg):
+        with self._sonar_lock:
+            self._sonar_points = list(msg.points) if msg and getattr(msg, 'points', None) is not None else None
+
+    def _sonar_pc2_callback(self, msg):
+        pts = None
+        if pc2 is not None:
+            try:
+                pts_iter = pc2.read_points(msg, field_names=("x","y","z"), skip_nans=True)
+                pts = [(float(x), float(y)) for (x,y,z) in pts_iter]
+            except Exception:
+                pts = None
+        with self._sonar_lock:
+            self._sonar_points = pts
+
+    def get_front_obstacle_distance(self):
+        with self._sonar_lock:
+            pts = list(self._sonar_points) if self._sonar_points is not None else None
+
+        if not pts:
+            return float('nan')
+
+        front_rad = math.radians(self.front_sector_deg)
+        min_dist = None
+        for p in pts:
+            try:
+                x = p.x
+                y = p.y
+            except Exception:
+                try:
+                    x, y = p[0], p[1]
+                except Exception:
+                    continue
+            dist = math.hypot(x, y)
+            if dist <= 0.0:
+                continue
+            angle = math.atan2(y, x)
+            if abs(angle) <= front_rad:
+                if (min_dist is None) or (dist < min_dist):
+                    min_dist = dist
+        return min_dist if min_dist is not None else float('nan')
+
+    def query_vlm(self, query_text: str):
+        if self.vlm_query is None or QueryTargetRequest is None:
+            raise RuntimeError('VLM service proxy not available or service type missing.')
+        req = QueryTargetRequest()
+        req.query = query_text
+        resp = self.vlm_query(req)
+        return {'found': bool(resp.found), 'bearing_deg': float(resp.bearing_deg), 'confidence': float(resp.confidence)}
+
+
+sensors = SensorHelper()
+
+
 @tool
 def drive_forward(distance_m: float) -> str:
     """
@@ -166,49 +300,123 @@ def turn(angle_deg: float) -> str:
     return motion.turn(angle_deg)
 
 
-class SimpleMotionAgent(ROSA):
+# new tools for sensors/VLM
+@tool
+def front_distance() -> str:
+    """Return front obstacle distance in meters as a string (or 'nan' if unknown)."""
+    try:
+        d = sensors.get_front_obstacle_distance()
+        if math.isnan(d):
+            return 'nan'
+        return f"{d:.3f}"
+    except Exception as e:
+        return f"error: {e}"
+
+
+@tool
+def vlm_query(query: str) -> str:
+    """Query the VLM for a bearing to the given query text."""
+    try:
+        res = sensors.query_vlm(query)
+        return f"found={res['found']}, bearing_deg={res['bearing_deg']:.2f}, confidence={res['confidence']:.3f}"
+    except Exception as e:
+        return f"error: {e}"
+
+
+class SimpleMotionAgent(ROSA if ROSA is not None else object):
     def __init__(self):
         # Read LLM config from ROS params with safe defaults
         model = rospy.get_param("~ollama_model", "llama3.1:8b")
         base_url = rospy.get_param("~ollama_base_url", "http://localhost:11434")
         temperature = float(rospy.get_param("~temperature", 0.0))
 
-        try:
-            # Ollama connectivity check
+        llm = None
+
+        def _init_llm_runtime(model, base_url, temperature):
+            # Attempt runtime import/instantiation of ChatOllama (best-effort).
             try:
                 resp = requests.get(f"{base_url.rstrip('/')}/api/tags", timeout=3)
                 if resp.status_code != 200:
-                    raise RuntimeError(f"Ollama at {base_url} returned {resp.status_code}. Ensure 'ollama serve' is running and reachable.")
-                tags = resp.json().get("models", []) if resp.headers.get("content-type", "").startswith("application/json") else []
-                have = any(model in (m.get("name") or m.get("model") or "") for m in tags)
-                if not have:
-                    rospy.logwarn(f"Ollama model '{model}' not found in tags.")
-            except Exception as conn_e:
-                rospy.logwarn(f"Ollama connectivity check failed: {conn_e}")
+                    rospy.logwarn(f"Ollama at {base_url} returned {resp.status_code}. Ensure 'ollama serve' is reachable.")
+            except Exception:
+                rospy.logwarn("Ollama connectivity check failed.")
 
-            llm = ChatOllama(model=model, base_url=base_url, temperature=temperature)
-        except Exception as e:
-            raise RuntimeError(f"Failed to initialize ChatOllama with model='{model}' at base_url='{base_url}'. If you see 404, pull the model first: 'ollama pull {model}', and ensure the base URL is reachable from this environment.") from e
-
-        super().__init__(
-            ros_version=1,
-            llm=llm,
-            tools=[drive_forward, drive_backward, turn],
-            verbose=True,
-            streaming=False,
-        )
-
-    async def run(self):
-        while True:
-            query = input("> ")
-            if query.lower() in ("exit", "quit"):
-                break
             try:
-                result = self.invoke(query)
-                print(result)
+                mod = importlib.import_module('langchain_ollama')
+                Cls = getattr(mod, 'ChatOllama', None)
+                if Cls is None:
+                    return None
+                return Cls(model=model, base_url=base_url, temperature=temperature)
             except Exception as e:
-                print(f"Agent error: {e}")
-                print("Ensure Ollama is serving and the model exists, and that ROS topics/services are available.")
+                raise RuntimeError(f"Failed to initialize ChatOllama at runtime: {e}") from e
+
+        try:
+            llm = _init_llm_runtime(model, base_url, temperature)
+            if llm is None:
+                rospy.logwarn("ChatOllama not available; agent llm functionality disabled.")
+        except Exception as e:
+            raise
+
+        if ROSA is None:
+            rospy.logwarn("ROSA base class not available; creating a minimal agent object with tool invocation support.")
+
+        tools = [drive_forward, drive_backward, turn, vlm_query, front_distance]
+
+        # If ROSA is available, call its constructor or just set minimal attrs
+        if ROSA is not None:
+            super().__init__(
+                ros_version=1,
+                llm=llm,
+                tools=tools,
+                verbose=True,
+                streaming=False,
+            )
+        else:
+            self.tools = {t.__name__: t for t in tools}
+            self.llm = llm
+            self.verbose = True
+
+    def invoke(self, query: str):
+        if ROSA is not None:
+            return super().invoke(query)
+
+        # Minimal parsing: split by whitespace
+        parts = query.strip().split()
+        if not parts:
+            return "empty query"
+
+        cmd = parts[0]
+        args = parts[1:]
+
+        if cmd in self.tools:
+            func = self.tools[cmd]
+            # Try to coerce single numeric arg
+            try:
+                if len(args) == 0:
+                    return func()
+                if len(args) == 1:
+                    try:
+                        val = float(args[0])
+                        return func(val)
+                    except Exception:
+                        return func(" ".join(args))
+                return func(" ".join(args))
+            except TypeError:
+                return f"tool invocation failed for {cmd}"
+        else:
+            return f"unknown command '{cmd}'"
+
+
+async def run_loop(agent: SimpleMotionAgent):
+    while True:
+        query = input("> ")
+        if query.lower() in ("exit", "quit"):
+            break
+        try:
+            result = agent.invoke(query)
+            print(result)
+        except Exception as e:
+            print(f"Agent error: {e}")
 
 
 def main():
@@ -216,7 +424,7 @@ def main():
     agent = SimpleMotionAgent()
 
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(agent.run())
+    loop.run_until_complete(run_loop(agent))
 
 
 if __name__ == "__main__":
