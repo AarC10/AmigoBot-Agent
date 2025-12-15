@@ -14,6 +14,7 @@ import math
 import asyncio
 import rospy
 import threading
+import requests
 from geometry_msgs.msg import Twist
 from nav_msgs.msg import Odometry
 from langchain.agents import tool
@@ -167,7 +168,27 @@ def turn(angle_deg: float) -> str:
 
 class SimpleMotionAgent(ROSA):
     def __init__(self):
-        llm = ChatOllama(model="llama3.1", base_url="http://localhost:11434", temperature=0.0)
+        # Read LLM config from ROS params with safe defaults
+        model = rospy.get_param("~ollama_model", "llama3.1:8b")
+        base_url = rospy.get_param("~ollama_base_url", "http://localhost:11434")
+        temperature = float(rospy.get_param("~temperature", 0.0))
+
+        try:
+            # Ollama connectivity check
+            try:
+                resp = requests.get(f"{base_url.rstrip('/')}/api/tags", timeout=3)
+                if resp.status_code != 200:
+                    raise RuntimeError(f"Ollama at {base_url} returned {resp.status_code}. Ensure 'ollama serve' is running and reachable.")
+                tags = resp.json().get("models", []) if resp.headers.get("content-type", "").startswith("application/json") else []
+                have = any(model in (m.get("name") or m.get("model") or "") for m in tags)
+                if not have:
+                    rospy.logwarn(f"Ollama model '{model}' not found in tags.")
+            except Exception as conn_e:
+                rospy.logwarn(f"Ollama connectivity check failed: {conn_e}")
+
+            llm = ChatOllama(model=model, base_url=base_url, temperature=temperature)
+        except Exception as e:
+            raise RuntimeError(f"Failed to initialize ChatOllama with model='{model}' at base_url='{base_url}'. If you see 404, pull the model first: 'ollama pull {model}', and ensure the base URL is reachable from this environment.") from e
 
         super().__init__(
             ros_version=1,
@@ -182,7 +203,12 @@ class SimpleMotionAgent(ROSA):
             query = input("> ")
             if query.lower() in ("exit", "quit"):
                 break
-            print(self.invoke(query))
+            try:
+                result = self.invoke(query)
+                print(result)
+            except Exception as e:
+                print(f"Agent error: {e}")
+                print("Ensure Ollama is serving and the model exists, and that ROS topics/services are available.")
 
 
 def main():
