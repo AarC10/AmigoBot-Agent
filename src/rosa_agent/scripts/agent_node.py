@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 import sys
+
 # Ensure ROS/system site-packages are visible before any ROS imports
 sys.path.insert(0, "/opt/ros/noetic/lib/python3/dist-packages")
 sys.path.insert(0, "/usr/lib/python3/dist-packages")
@@ -8,7 +9,8 @@ sys.path.insert(0, "/usr/lib/python3/dist-packages")
 try:
     import rospkg  # noqa: F401
 except Exception as e:
-    raise ImportError("rospkg not found. Ensure ROS Python site-packages are on sys.path and apt package python3-rospkg is installed.") from e
+    raise ImportError(
+        "rospkg not found. Ensure ROS Python site-packages are on sys.path and apt package python3-rospkg is installed.") from e
 
 import math
 import asyncio
@@ -236,14 +238,18 @@ class SensorHelper:
         pts = None
         if pc2 is not None:
             try:
-                pts_iter = pc2.read_points(msg, field_names=("x","y","z"), skip_nans=True)
-                pts = [(float(x), float(y)) for (x,y,z) in pts_iter]
+                pts_iter = pc2.read_points(msg, field_names=("x", "y", "z"), skip_nans=True)
+                pts = [(float(x), float(y)) for (x, y, z) in pts_iter]
             except Exception:
                 pts = None
         with self._sonar_lock:
             self._sonar_points = pts
 
     def get_front_obstacle_distance(self):
+        """
+        Get the distance to the nearest obstacle in front of the robot using sonar data.
+        :return: Distance in meters, or float('nan') if unknown.
+        """
         with self._sonar_lock:
             pts = list(self._sonar_points) if self._sonar_points is not None else None
 
@@ -283,8 +289,7 @@ class SensorHelper:
                             min_dist = dist
                 return min_dist if min_dist is not None else float('nan')
         except Exception:
-            # fallback to positional method below
-            pass
+            rospy.logwarn("agent_node: Front obstacle distance not available")
 
         # Fallback: compute angle per point using atan2(y, x)
         front_rad = math.radians(self.front_sector_deg)
@@ -326,6 +331,7 @@ def drive_forward(distance_m: float) -> str:
     :param distance_m: Distance to move forward in meters.
     :return: Status message.
     """
+    rospy.loginfo("agent_node: drive_forward {distance_m=%.2f}", distance_m)
     return motion.drive(distance_m)
 
 
@@ -336,6 +342,7 @@ def drive_backward(distance_m: float) -> str:
     :param distance_m: Distance to move backward in meters.
     :return: Status message.
     """
+    rospy.loginfo("agent_node: drive_backward {distance_m=%.2f}", distance_m)
     return motion.drive(-distance_m)
 
 
@@ -346,13 +353,17 @@ def turn(angle_deg: float) -> str:
     :param angle_deg: Angle to turn in degrees (positive for left, negative for right).
     :return: Status message.
     """
+    rospy.loginfo("agent_node: turn {angle_deg=%.2f}", angle_deg)
     return motion.turn(angle_deg)
 
 
-# new tools for sensors/VLM
 @tool
 def front_distance() -> str:
-    """Return front obstacle distance in meters as a string (or 'nan' if unknown)."""
+    """
+    Get the distance to the nearest obstacle in front of the robot.
+    :return: Distance in meters as a string, or 'nan' if unknown.
+    """
+    rospy.loginfo("agent_node: front_distance")
     try:
         d = sensors.get_front_obstacle_distance()
         if math.isnan(d):
@@ -364,7 +375,12 @@ def front_distance() -> str:
 
 @tool
 def vlm_query(query: str) -> str:
-    """Query the VLM for a bearing to the given query text."""
+    """
+    Query the Vision-Language Model (VLM) for a specified object to get its bearing and confidence.
+    :param query: The object to look for with the camera
+    :return: A string with found status, bearing in degrees, and confidence.
+    """
+    rospy.loginfo("agent_node: vlm_query {query='%s'}", query)
     try:
         res = sensors.query_vlm(query)
         return f"found={res['found']}, bearing_deg={res['bearing_deg']:.2f}, confidence={res['confidence']:.3f}"
@@ -372,7 +388,7 @@ def vlm_query(query: str) -> str:
         return f"error: {e}"
 
 
-class SimpleMotionAgent(ROSA if ROSA is not None else object):
+class AmigobotAgent(ROSA if ROSA is not None else object):
     def __init__(self):
         # Read LLM config from ROS params with safe defaults
         model = rospy.get_param("~ollama_model", "llama3.1:8b")
@@ -386,7 +402,8 @@ class SimpleMotionAgent(ROSA if ROSA is not None else object):
             try:
                 resp = requests.get(f"{base_url.rstrip('/')}/api/tags", timeout=3)
                 if resp.status_code != 200:
-                    rospy.logwarn(f"Ollama at {base_url} returned {resp.status_code}. Ensure 'ollama serve' is reachable.")
+                    rospy.logwarn(
+                        f"Ollama at {base_url} returned {resp.status_code}. Ensure 'ollama serve' is reachable.")
             except Exception:
                 rospy.logwarn("Ollama connectivity check failed.")
 
@@ -407,7 +424,8 @@ class SimpleMotionAgent(ROSA if ROSA is not None else object):
             raise
 
         if ROSA is None:
-            rospy.logwarn("ROSA base class not available; creating a minimal agent object with tool invocation support.")
+            rospy.logwarn(
+                "ROSA base class not available; creating a minimal agent object with tool invocation support.")
 
         tools = [drive_forward, drive_backward, turn, vlm_query, front_distance]
 
@@ -456,7 +474,7 @@ class SimpleMotionAgent(ROSA if ROSA is not None else object):
             return f"unknown command '{cmd}'"
 
 
-async def run_loop(agent: SimpleMotionAgent):
+async def run_loop(agent: AmigobotAgent):
     while True:
         query = input("> ")
         if query.lower() in ("exit", "quit"):
@@ -470,7 +488,7 @@ async def run_loop(agent: SimpleMotionAgent):
 
 def main():
     rospy.init_node("simple_motion_agent")
-    agent = SimpleMotionAgent()
+    agent = AmigobotAgent()
 
     loop = asyncio.get_event_loop()
     loop.run_until_complete(run_loop(agent))
