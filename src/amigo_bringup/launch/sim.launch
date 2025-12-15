@@ -24,6 +24,5 @@
 
   <!-- 4) ROSA Agent (replaces semantic nav) -->
   <include file="$(find rosa_agent)/launch/rosa_agent.launch">
-    <arg name="topic_list_path" value="$(find amigo_bringup)/../..//topic_list.txt" />
   </include>
 </launch>
