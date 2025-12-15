@@ -137,16 +137,31 @@ motion = MotionHelper()
 
 @tool
 def drive_forward(distance_m: float) -> str:
+    """
+    Move the robot forward by the specified distance in meters.
+    :param distance_m: Distance to move forward in meters.
+    :return: Status message.
+    """
     return motion.drive(distance_m)
 
 
 @tool
 def drive_backward(distance_m: float) -> str:
+    """
+    Move the robot backward by the specified distance in meters.
+    :param distance_m: Distance to move backward in meters.
+    :return: Status message.
+    """
     return motion.drive(-distance_m)
 
 
 @tool
 def turn(angle_deg: float) -> str:
+    """
+    Turn the robot by the specified angle in degrees.
+    :param angle_deg: Angle to turn in degrees (positive for left, negative for right).
+    :return: Status message.
+    """
     return motion.turn(angle_deg)
 
 

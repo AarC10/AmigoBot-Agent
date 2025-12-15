@@ -56,9 +56,9 @@ Sonar 0: 90 degrees left
 Sonar 1: 44 degrees left
 Sonar 2: 12 degrees
 Sonar 3: 12 degrees right (-12)
-Sonar 4: -44 degrees right (-44)
+Sonar 4: 44 degrees right (-44)
 Sonar 4: 90 degrees right (-90)
-Sonar 5: -144 degrees right (-144)
+Sonar 5: 144 degrees right (-144)
 Sonar 6: 144 degrees left
 
 points:
