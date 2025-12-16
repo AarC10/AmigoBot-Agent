@@ -367,7 +367,6 @@ def make_tools(motion: MotionHelper, sensors: SensorHelper):
         :param distance_m: Distance to move forward in meters.
         :return: Status message.
         """
-        print("TOOL CALL: drive_forward", distance_m)
         rospy.loginfo("agent_node: drive_forward {distance_m=%.2f}", distance_m)
         return motion.drive(distance_m)
 
@@ -378,7 +377,6 @@ def make_tools(motion: MotionHelper, sensors: SensorHelper):
         :param distance_m: Distance to move backward in meters.
         :return: Status message.
         """
-        print("TOOL CALL: drive_backward", distance_m)
         rospy.loginfo("agent_node: drive_backward {distance_m=%.2f}", distance_m)
         return motion.drive(-distance_m)
 
@@ -389,7 +387,6 @@ def make_tools(motion: MotionHelper, sensors: SensorHelper):
         :param angle_deg: Angle to turn in degrees (positive for left, negative for right).
         :return: Status message.
         """
-        print("TOOL CALL: turn", angle_deg)
         rospy.loginfo("agent_node: turn {angle_deg=%.2f}", angle_deg)
         return motion.turn(angle_deg)
 
@@ -399,7 +396,6 @@ def make_tools(motion: MotionHelper, sensors: SensorHelper):
         Get the distance to the nearest obstacle in front of the robot.
         :return: Distance in meters as a string, or 'nan' if unknown.
         """
-        print("TOOL CALL: front_distance")
         rospy.loginfo("agent_node: front_distance")
         try:
             d = sensors.get_front_obstacle_distance()
@@ -416,7 +412,6 @@ def make_tools(motion: MotionHelper, sensors: SensorHelper):
         :param query: The object to look for with the camera
         :return: A string with found status, bearing in degrees, and confidence.
         """
-        print("TOOL CALL: vlm_query", query)
         rospy.loginfo("agent_node: vlm_query {query='%s'}", query)
         try:
             res = sensors.query_vlm(query)
@@ -427,7 +422,6 @@ def make_tools(motion: MotionHelper, sensors: SensorHelper):
     @tool
     def sonar_distance(index: int) -> str:
         """Return the distance for a particular sonar channel index (meters) as a string."""
-        print("TOOL CALL: sonar_distance", index)
         rospy.loginfo("agent_node: sonar_distance {index=%d}", index)
         try:
             d = sensors.get_distance_for_index(int(index))
@@ -440,7 +434,6 @@ def make_tools(motion: MotionHelper, sensors: SensorHelper):
     @tool
     def sonar_distance_angle(angle_deg: float) -> str:
         """Find the sonar index closest to angle_deg and return its distance as a string."""
-        print("TOOL CALL: sonar_distance_angle", angle_deg)
         try:
             idx = sensors.get_index_for_angle(float(angle_deg))
             if idx is None:
@@ -474,7 +467,6 @@ def make_tools(motion: MotionHelper, sensors: SensorHelper):
         """
         import statistics
 
-        print("TOOL CALL: approach_target_safe", query, safety_margin, confidence_threshold, samples, sample_delay)
         rospy.loginfo("agent_node: approach_target_safe {query='%s', safety_margin=%.2f, confidence_threshold=%.3f, samples=%d, sample_delay=%.2f}",
                       query, safety_margin, confidence_threshold, samples, sample_delay)
 
@@ -656,7 +648,7 @@ async def run_loop(agent: AmigobotAgent):
             break
         try:
             result = agent.invoke(query)
-            print(result)
+            # print(result)
         except Exception as e:
             print(f"Agent error: {e}")
 
