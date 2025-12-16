@@ -9,6 +9,7 @@ services:
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
     environment:
       - DISPLAY=${DISPLAY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
     network_mode: "host"
     tty: true
     stdin_open: true

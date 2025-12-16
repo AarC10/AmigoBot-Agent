@@ -92,7 +92,7 @@ class MotionHelper:
             rate.sleep()
         return False
 
-    def drive(self, distance_m: float, speed=0.1, timeout=10.0):
+    def drive(self, distance_m: float, speed=0.1, timeout=60.0):
         if distance_m == 0.0:
             return "Distance must be non-zero."
 
@@ -585,18 +585,17 @@ class AmigobotAgent(ROSA if ROSA is not None else object):
         #         return Cls(model=model, base_url=base_url, temperature=temperature)
         #     except Exception as e:
         #         raise RuntimeError(f"Failed to initialize ChatOllama at runtime: {e}") from e
+        # try:
+        #     llm = _init_llm_runtime(model, base_url, temperature)
+        #     if llm is None:
+        #         rospy.logwarn("ChatOllama not available; agent llm functionality disabled.")
+        # except Exception as e:
+        #     raise
 
         llm = ChatOpenAI(
             model="gpt-4o",
             temperature=0,
         )
-
-        try:
-            llm = _init_llm_runtime(model, base_url, temperature)
-            if llm is None:
-                rospy.logwarn("ChatOllama not available; agent llm functionality disabled.")
-        except Exception as e:
-            raise
 
         if ROSA is None:
             rospy.logwarn(
