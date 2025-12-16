@@ -66,6 +66,8 @@ except Exception:
     PointCloud2 = None
     pc2 = None
 
+from prompts import get_prompts
+
 
 class MotionHelper:
     def __init__(self):
@@ -608,6 +610,7 @@ class AmigobotAgent(ROSA if ROSA is not None else object):
                 tools=tools,
                 verbose=True,
                 streaming=False,
+                prompts=get_prompts(),
             )
         else:
             self.tools = {t.__name__: t for t in tools}
