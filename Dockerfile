@@ -27,7 +27,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN python3.9 -m venv /opt/rosa-venv && \
     /opt/rosa-venv/bin/python -m pip install --upgrade pip && \
     /opt/rosa-venv/bin/pip install --no-cache-dir \
-        jpl-rosa langchain_ollama rich pyinputplus python-dotenv
+        jpl-rosa langchain_ollama rich pyinputplus python-dotenv openai langchain-openai
 
 RUN python3 -m pip install --no-cache-dir --upgrade pip && \
     python3 -m pip install --no-cache-dir \

@@ -25,12 +25,16 @@ import importlib
 from langchain_core.tools import tool, Tool
 from rosa import ROSA, RobotSystemPrompts
 
-# Attempt to import ChatOllama and ROSA
-try:
-    _mod_llama = importlib.import_module('langchain_ollama')
-    ChatOllama = getattr(_mod_llama, 'ChatOllama', None)
-except Exception:
-    ChatOllama = None
+# Attempt to import ChatOllama
+# try:
+#     _mod_llama = importlib.import_module('langchain_ollama')
+#     ChatOllama = getattr(_mod_llama, 'ChatOllama', None)
+# except Exception:
+#     ChatOllama = None
+
+# Import chatgpt
+from langchain_openai import ChatOpenAI
+
 
 # VLM service and pointcloud types
 try:
@@ -563,24 +567,29 @@ class AmigobotAgent(ROSA if ROSA is not None else object):
 
         llm = None
 
-        def _init_llm_runtime(model, base_url, temperature):
-            # Attempt runtime import/instantiation of ChatOllama (best-effort).
-            try:
-                resp = requests.get(f"{base_url.rstrip('/')}/api/tags", timeout=3)
-                if resp.status_code != 200:
-                    rospy.logwarn(
-                        f"Ollama at {base_url} returned {resp.status_code}. Ensure 'ollama serve' is reachable.")
-            except Exception:
-                rospy.logwarn("Ollama connectivity check failed.")
+        # def _init_llm_runtime(model, base_url, temperature):
+        #     # Attempt runtime import/instantiation of ChatOllama (best-effort).
+        #     try:
+        #         resp = requests.get(f"{base_url.rstrip('/')}/api/tags", timeout=3)
+        #         if resp.status_code != 200:
+        #             rospy.logwarn(
+        #                 f"Ollama at {base_url} returned {resp.status_code}. Ensure 'ollama serve' is reachable.")
+        #     except Exception:
+        #         rospy.logwarn("Ollama connectivity check failed.")
+        #
+        #     try:
+        #         mod = importlib.import_module('langchain_ollama')
+        #         Cls = getattr(mod, 'ChatOllama', None)
+        #         if Cls is None:
+        #             return None
+        #         return Cls(model=model, base_url=base_url, temperature=temperature)
+        #     except Exception as e:
+        #         raise RuntimeError(f"Failed to initialize ChatOllama at runtime: {e}") from e
 
-            try:
-                mod = importlib.import_module('langchain_ollama')
-                Cls = getattr(mod, 'ChatOllama', None)
-                if Cls is None:
-                    return None
-                return Cls(model=model, base_url=base_url, temperature=temperature)
-            except Exception as e:
-                raise RuntimeError(f"Failed to initialize ChatOllama at runtime: {e}") from e
+        llm = ChatOpenAI(
+            model="gpt-4o",
+            temperature=0,
+        )
 
         try:
             llm = _init_llm_runtime(model, base_url, temperature)
