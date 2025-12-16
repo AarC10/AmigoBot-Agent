@@ -1,7 +1,7 @@
 <launch>
   <arg name="camera_fov_deg"     default="60.0" />
   <arg name="vlm_device"         default="cpu" />
-  <arg name="vlm_min_confidence" default="0.4" />
+  <arg name="vlm_min_confidence" default="0.8" />
 
   <!-- 1) Sim Robot Bringup -->
   <include file="$(find amigo_sim)/amigo_sim.launch">
