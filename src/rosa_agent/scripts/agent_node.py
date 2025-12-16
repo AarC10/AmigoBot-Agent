@@ -22,21 +22,8 @@ from nav_msgs.msg import Odometry
 
 import importlib
 
-# Attempt to import langchain tool decorator
-try:
-    _lc_agents = importlib.import_module('langchain.agents')
-    tool = getattr(_lc_agents, 'tool', None)
-    if not callable(tool):
-        def tool(fn=None, *dargs, **dkwargs):
-            if fn is None:
-                return lambda f: f
-            return fn
-except Exception:
-    def tool(fn=None, *dargs, **dkwargs):
-        # allow using @tool without breaking
-        if fn is None:
-            return lambda f: f
-        return fn
+from langchain_core.tools import tool, Tool
+from rosa import ROSA, RobotSystemPrompts
 
 # Attempt to import ChatOllama and ROSA
 try:
@@ -44,12 +31,6 @@ try:
     ChatOllama = getattr(_mod_llama, 'ChatOllama', None)
 except Exception:
     ChatOllama = None
-
-try:
-    _mod_rosa = importlib.import_module('rosa')
-    ROSA = getattr(_mod_rosa, 'ROSA', None)
-except Exception:
-    ROSA = None
 
 # VLM service and pointcloud types
 try:
@@ -66,10 +47,6 @@ except Exception:
     PointCloud2 = None
     pc2 = None
 
-try:
-    from rosa import RobotSystemPrompts
-except Exception:
-    pass
 
 class MotionHelper:
     def __init__(self):
@@ -633,8 +610,10 @@ class AmigobotAgent(ROSA if ROSA is not None else object):
 
     def invoke(self, query: str):
         if ROSA is not None:
+            rospy.loginfo(f"Invoking ROSA agent for query: {query}")
             return super().invoke(query)
 
+        rospy.loginfo(f"ROSA not available; minimal invoke for query: {query}")
         # Minimal parsing: split by whitespace
         parts = query.strip().split()
         if not parts:
@@ -712,6 +691,9 @@ def main():
     sensors = SensorHelper()
     tools = make_tools(motion, sensors)
     agent = AmigobotAgent(tools)
+
+    rospy.loginfo(f"Agent started.")
+    print("MANUAL TOOL INVOKE:", tools[0].invoke({"distance_m": 0.1}))
 
     loop = asyncio.get_event_loop()
     loop.run_until_complete(run_loop(agent))
