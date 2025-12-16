@@ -3,7 +3,7 @@ services:
     user: "${UID}:${GID}"
     build: .
     image: amigobot:noetic
-    # Mount the repo root into the container so your IDE edits are reflected immediately
+    # Mount the repo root into the container so IDE edits are reflected immediately
     volumes:
       - ./:/workspace:rw
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
@@ -15,5 +15,8 @@ services:
     working_dir: /workspace
     devices:
       - /dev/video0:/dev/video0
+      - /dev/dri:/dev/dri
+    group_add:
+      - "video"
     privileged: true
 
