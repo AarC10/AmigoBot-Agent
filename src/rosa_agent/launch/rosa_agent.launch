@@ -2,7 +2,7 @@
   <arg name="ollama_model"    default="llama3.1:8b" />
   <arg name="ollama_base_url" default="http://localhost:11434" />
 
-  <node pkg="amigo_rosa"
+  <node pkg="amigo_agent"
         type="agent_node.py"
         name="amigo_rosa"
         output="screen"

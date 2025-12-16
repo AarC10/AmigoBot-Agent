@@ -36,6 +36,6 @@
   </include>
 
   <!-- 4) ROSA Agent -->
-  <include file="$(find rosa_agent)/launch/rosa_agent.launch">
+  <include file="$(find amigo_agent)/launch/rosa_agent.launch">
   </include>
 </launch>
