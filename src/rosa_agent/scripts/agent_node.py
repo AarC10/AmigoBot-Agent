@@ -35,7 +35,6 @@ from rosa import ROSA, RobotSystemPrompts
 # Import chatgpt
 from langchain_openai import ChatOpenAI
 
-
 # VLM service and pointcloud types
 try:
     from vlm_clip.srv import QueryTarget, QueryTargetRequest
@@ -467,8 +466,9 @@ def make_tools(motion: MotionHelper, sensors: SensorHelper):
         """
         import statistics
 
-        rospy.loginfo("agent_node: approach_target_safe {query='%s', safety_margin=%.2f, confidence_threshold=%.3f, samples=%d, sample_delay=%.2f}",
-                      query, safety_margin, confidence_threshold, samples, sample_delay)
+        rospy.loginfo(
+            "agent_node: approach_target_safe {query='%s', safety_margin=%.2f, confidence_threshold=%.3f, samples=%d, sample_delay=%.2f}",
+            query, safety_margin, confidence_threshold, samples, sample_delay)
 
         # Query VLM
         try:
@@ -684,6 +684,7 @@ def get_prompts():
         nuance_and_assumptions="Distances are meters, angles are degrees. Positive turn is left.",
         mission_and_objectives="Correctly execute robot motion and sensing requests using tools.",
     )
+
 
 def main():
     rospy.init_node("amigo_agent")

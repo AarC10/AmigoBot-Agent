@@ -3,17 +3,17 @@
   <arg name="vlm_device"         default="cpu" />
   <arg name="vlm_min_confidence" default="0.8" />
 
-  <!-- 1) Sim Robot Bringup -->
+  <!-- Sim Robot Bringup -->
   <include file="$(find amigo_sim)/amigo_sim.launch">
   </include>
 
-  <!-- 2) Camera -->
+  <!-- Camera -->
   <include file="$(find picam_forwarder)/launch/local_cam.launch">
     <arg name="image_topic" value="/camera/image_raw" />
     <arg name="frame_id"    value="camera_link" />
   </include>
 
-  <!-- 3) VLM -->
+  <!-- VLM -->
   <include file="$(find vlm_clip)/launch/clip.launch">
     <arg name="image_topic"    value="/camera/image_raw" />
     <arg name="camera_fov_deg" value="$(arg camera_fov_deg)" />
@@ -22,7 +22,7 @@
     <arg name="device"         value="$(arg vlm_device)" />
   </include>
 
-  <!-- 4) ROSA Agent -->
+  <!-- ROSA Agent -->
   <include file="$(find amigo_agent)/launch/rosa_agent.launch">
   </include>
 </launch>

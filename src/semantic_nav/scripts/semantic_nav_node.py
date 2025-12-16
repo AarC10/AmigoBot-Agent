@@ -11,6 +11,7 @@ from vlm_clip.srv import QueryTarget, QueryTargetRequest, QueryTargetResponse
 from semantic_nav.msg import GoToTargetAction, GoToTargetFeedback, GoToTargetResult
 from std_srvs.srv import Trigger, TriggerResponse
 
+
 class SemanticNavigator(object):
     STATE_IDLE = "IDLE"
     STATE_ALIGN = "ALIGN"
@@ -33,7 +34,7 @@ class SemanticNavigator(object):
         self.max_turn_rate = float(rospy.get_param("~max_turn_rate", 0.6))  # rad/s
 
         self.forward_speed = float(rospy.get_param("~forward_speed", 0.1))  # m/s
-        self.stop_distance = float(rospy.get_param("~stop_distance", 0.5))   # m
+        self.stop_distance = float(rospy.get_param("~stop_distance", 0.5))  # m
         self.front_sector_deg = float(rospy.get_param("~front_sector_deg", 30.0))
 
         # internal state
@@ -45,7 +46,7 @@ class SemanticNavigator(object):
         self._current_goal_active = False
         self._goal_start_time = None
 
-        self.max_goal_duration = float(rospy.get_param("~max_goal_duration", 20.0)) # secs
+        self.max_goal_duration = float(rospy.get_param("~max_goal_duration", 20.0))  # secs
 
         # sonar buffer
         self._sonar_lock = threading.Lock()
@@ -56,7 +57,8 @@ class SemanticNavigator(object):
         # Subscribe to both common sonar topic names/types so the node works with either setup
         self.sonar_sub_pc2 = rospy.Subscriber(self.sonar_topic, PointCloud2, self._sonar_pc2_callback, queue_size=1)
         # also subscribe to legacy '/sonar' PointCloud if available
-        self.sonar_sub_pc = rospy.Subscriber(rospy.get_param("~legacy_sonar_topic", "/sonar"), PointCloud, self._sonar_callback, queue_size=1)
+        self.sonar_sub_pc = rospy.Subscriber(rospy.get_param("~legacy_sonar_topic", "/sonar"), PointCloud,
+                                             self._sonar_callback, queue_size=1)
 
         # Should wait for VLM service to be available
         rospy.loginfo("semantic_nav: waiting for VLM service '%s'", self.vlm_service_name)
@@ -65,7 +67,6 @@ class SemanticNavigator(object):
         except rospy.ROSException:
             rospy.logwarn("semantic_nav: VLM service '%s' not available at startup", self.vlm_service_name)
         self.vlm_query = rospy.ServiceProxy(self.vlm_service_name, QueryTarget)
-
 
         # start/stop services
         self.start_srv = rospy.Service("~start", Trigger, self.handle_start)
@@ -171,7 +172,6 @@ class SemanticNavigator(object):
             self._current_goal_active = False
             result = GoToTargetResult(success=False, message="Aborted")
             self.action_server.set_aborted(result=result)
-
 
     # Callbacks
     def _sonar_callback(self, msg: PointCloud):

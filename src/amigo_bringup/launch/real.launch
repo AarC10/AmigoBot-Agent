@@ -10,7 +10,7 @@
   <include file="$(find amigo_real)/amigo_real.launch">
   </include>
 
-  <!-- 2) Camera -->
+  <!-- Camera -->
   <group if="$(arg use_pi_camera)">
     <include file="$(find picam_forwarder)/launch/remote_cam.launch">
       <arg name="pi_host"    value="$(arg pi_host)" />
@@ -26,7 +26,7 @@
     </include>
   </group>
 
-  <!-- 3) VLM -->
+  <!-- VLM -->
   <include file="$(find vlm_clip)/launch/vlm_clip_basic.launch">
     <arg name="image_topic"    value="/camera/image_raw" />
     <arg name="camera_fov_deg" value="$(arg camera_fov_deg)" />
@@ -35,7 +35,7 @@
     <arg name="device"         value="$(arg vlm_device)" />
   </include>
 
-  <!-- 4) ROSA Agent -->
+  <!-- ROSA Agent -->
   <include file="$(find amigo_agent)/launch/rosa_agent.launch">
   </include>
 </launch>
